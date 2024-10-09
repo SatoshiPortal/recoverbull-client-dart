@@ -32,8 +32,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  void _incrementCounter() {}
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -45,35 +43,39 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            TextFormField(
-              initialValue: Global.backupKey,
-              decoration:
-                  const InputDecoration(labelText: 'Backup Key (base64)'),
-              onChanged: (v) => setState(() => Global.backupKey = v),
-              maxLength: 44,
+            SizedBox(
+              width: 500,
+              child: TextFormField(
+                initialValue: Global.backupKey,
+                decoration:
+                    const InputDecoration(labelText: 'Backup Key (base64)'),
+                onChanged: (v) => setState(() => Global.backupKey = v),
+                maxLength: 44,
+              ),
             ),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const BackupPage()),
-                  );
-                },
-                child: const Text('Backup'),
-              ),
-              const ElevatedButton(
-                onPressed: null,
-                child: Text('Recover'),
-              ),
-            ]),
+            SizedBox(
+              width: 500,
+              child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const BackupPage()),
+                        );
+                      },
+                      child: const Text('Backup'),
+                    ),
+                    const ElevatedButton(
+                      onPressed: null,
+                      child: Text('Recover'),
+                    ),
+                  ]),
+            ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
       ),
     );
   }

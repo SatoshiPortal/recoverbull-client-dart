@@ -1,14 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart';
 
-Future<File> generateBackup(
-  String path,
-  String plaintext,
-  String secretKey,
-) async {
+Future<String> generateBackup(String plaintext, String secretKey) async {
   try {
     final key = Key.fromBase64(secretKey);
     final iv = IV.fromLength(16);
@@ -24,10 +19,7 @@ Future<File> generateBackup(
     });
 
     final jsonBackup = jsonEncode(backup);
-
-    final file = File('$path/backup.json');
-    await file.writeAsString(jsonBackup);
-    return file;
+    return jsonBackup;
   } catch (e) {
     print('Failed to generate backup: $e');
     rethrow;
