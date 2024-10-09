@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wallet/features/backup/page.dart';
 import 'package:wallet/global.dart';
 
 void main() {
@@ -45,23 +46,27 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             TextFormField(
-              initialValue: Global.privateKey,
-              decoration: const InputDecoration(labelText: 'Private Key'),
-              onChanged: (v) => setState(() => Global.privateKey = v),
-              maxLength: 64,
+              initialValue: Global.backupKey,
+              decoration:
+                  const InputDecoration(labelText: 'Backup Key (base64)'),
+              onChanged: (v) => setState(() => Global.backupKey = v),
+              maxLength: 44,
             ),
-            const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ElevatedButton(
-                    onPressed: null,
-                    child: Text('Backup'),
-                  ),
-                  ElevatedButton(
-                    onPressed: null,
-                    child: Text('Recover'),
-                  ),
-                ]),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const BackupPage()),
+                  );
+                },
+                child: const Text('Backup'),
+              ),
+              const ElevatedButton(
+                onPressed: null,
+                child: Text('Recover'),
+              ),
+            ]),
           ],
         ),
       ),

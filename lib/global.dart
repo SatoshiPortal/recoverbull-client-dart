@@ -1,7 +1,6 @@
-var _privateKey =
-    'c37c299bb7f5ffd8d9329d052983342a8c3234ff3b3fa32a292187341f7146d7';
+var _backupKey = 'w3wpm7f1/9jZMp0FKYM0KowyNP87P6MqKSGHNB9xRtc='; // base 64
 
 class Global {
-  static String get privateKey => _privateKey;
-  static set privateKey(String v) => _privateKey = v;
+  static String get backupKey => _backupKey;
+  static set backupKey(String v) => _backupKey = v;
 }
