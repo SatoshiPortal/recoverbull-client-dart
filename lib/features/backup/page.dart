@@ -4,7 +4,7 @@ import 'package:file_saver/file_saver.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:wallet/features/backup/service.dart';
-import 'package:wallet/features/keychain/page.dart';
+import 'package:wallet/features/backup-keychain/page.dart';
 import 'package:wallet/global.dart';
 
 class BackupPage extends StatefulWidget {
