@@ -77,7 +77,6 @@ class _PinSelectionPageState extends State<KeychainPage> {
                       controller: _pinController,
                       decoration: const InputDecoration(labelText: 'Enter PIN'),
                       keyboardType: TextInputType.number,
-                      obscureText: true,
                       maxLength: 6,
                     ),
                   ),

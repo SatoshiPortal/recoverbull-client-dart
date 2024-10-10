@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:wallet/features/backup/page.dart';
+import 'package:wallet/features/recover-keychain/page.dart';
 import 'package:wallet/features/recover-manual/page.dart';
 import 'package:wallet/global.dart';
 
@@ -15,8 +16,17 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Wallet Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: const ColorScheme.dark(),
         useMaterial3: true,
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ButtonStyle(
+            backgroundColor: WidgetStateProperty.all(Colors.black),
+          ),
+        ),
+        snackBarTheme: const SnackBarThemeData(
+          backgroundColor: Colors.deepOrange,
+          contentTextStyle: TextStyle(color: Colors.white),
+        ),
       ),
       home: const MyHomePage(title: 'Backup/Recover Demo'),
     );
@@ -68,16 +78,33 @@ class _MyHomePageState extends State<MyHomePage> {
                       },
                       child: const Text('Backup'),
                     ),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const ManualRecoveryPage()),
-                        );
-                      },
-                      child: const Text('Manual Recovery'),
-                    ),
+                    Column(
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      const ManualRecoveryPage()),
+                            );
+                          },
+                          child: const Text('Manual Recovery'),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      const KeychainRecoveryPage()),
+                            );
+                          },
+                          child: const Text('Keychain Recovery'),
+                        ),
+                      ],
+                    )
                   ]),
             ),
           ],

@@ -58,22 +58,25 @@ class _RecoverPageState extends State<ManualRecoveryPage> {
       appBar: AppBar(title: const Text('Manual Recovery')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            if (filename.isEmpty)
-              ElevatedButton(
-                onPressed: _pickFile,
-                child: Text(filename.isNotEmpty
-                    ? 'Select Backup File'
-                    : 'File Selected'),
-              ),
-            if (filename.isNotEmpty) Text(filename),
-            if (filename.isNotEmpty)
-              ElevatedButton(
-                onPressed: _decryptBackup,
-                child: const Text('Decrypt Backup'),
-              ),
-          ],
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (filename.isEmpty)
+                ElevatedButton(
+                  onPressed: _pickFile,
+                  child: Text(filename.isNotEmpty
+                      ? 'Select Backup File'
+                      : 'File Selected'),
+                ),
+              if (filename.isNotEmpty) Text(filename),
+              if (filename.isNotEmpty)
+                ElevatedButton(
+                  onPressed: _decryptBackup,
+                  child: const Text('Decrypt Backup'),
+                ),
+            ],
+          ),
         ),
       ),
     );
