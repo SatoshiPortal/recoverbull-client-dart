@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:wallet/features/backup/service.dart';
 import 'package:wallet/features/backup-keychain/page.dart';
 import 'package:wallet/global.dart';
+import 'package:wallet/utils.dart';
 
 class BackupPage extends StatefulWidget {
   const BackupPage({super.key});
@@ -19,14 +19,14 @@ class _BackupPageState extends State<BackupPage> {
     text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit',
   );
 
-  Future<void> _generateBackup() async {
+  Future<void> _generateEncryptedBackup() async {
     if (!mounted) return;
     try {
       final backup =
-          await generateBackup(_textController.text, Global.backupKey);
+          await generateEncryptedBackup(_textController.text, Global.backupKey);
 
       FileSaver.instance.saveFile(
-        name: 'backup.json',
+        name: 'encrypted-backup.json',
         bytes: Uint8List.fromList(utf8.encode(backup)),
       );
 
@@ -65,7 +65,7 @@ class _BackupPageState extends State<BackupPage> {
                 ),
               ),
               ElevatedButton(
-                onPressed: _generateBackup,
+                onPressed: _generateEncryptedBackup,
                 child: const Text('Generate Encrypted Backup'),
               ),
             ],
