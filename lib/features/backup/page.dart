@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:wallet/features/backup-keychain/page.dart';
 import 'package:wallet/global.dart';
 import 'package:wallet/utils.dart';
 
@@ -32,11 +31,6 @@ class _BackupPageState extends State<BackupPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Backup downloaded')),
-      );
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const KeychainPage()),
       );
     } catch (e) {
       print(e);

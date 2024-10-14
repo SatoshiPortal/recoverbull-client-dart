@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:wallet/features/backup-keychain/page.dart';
+import 'package:wallet/features/backup-social/page.dart';
 import 'package:wallet/features/backup/page.dart';
 import 'package:wallet/features/recover-keychain/page.dart';
 import 'package:wallet/features/recover-manual/page.dart';
@@ -68,15 +70,41 @@ class _MyHomePageState extends State<MyHomePage> {
               child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const BackupPage()),
-                        );
-                      },
-                      child: const Text('Backup'),
+                    Column(
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const BackupPage()),
+                            );
+                          },
+                          child: const Text('Backup'),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const KeychainPage()),
+                            );
+                          },
+                          child: const Text('Keychain Backup'),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const SocialPage()),
+                            );
+                          },
+                          child: const Text('Social Backup'),
+                        ),
+                      ],
                     ),
                     Column(
                       children: [
