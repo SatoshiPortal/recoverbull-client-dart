@@ -40,6 +40,7 @@ dependencies:
   http: ^1.2.2
   file_saver: ^0.2.14
   file_picker: ^8.1.2
+  web_socket_channel: ^3.0.1
 
 dev_dependencies:
   flutter_test:
