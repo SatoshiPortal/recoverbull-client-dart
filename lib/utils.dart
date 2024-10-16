@@ -1,5 +1,5 @@
 import 'dart:convert';
-
+import 'package:fast_rsa/fast_rsa.dart' as fast;
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart';
 
@@ -54,4 +54,17 @@ String decryptBackup(String json, String secretKey) {
     print('Failed to decrypt backup: $e');
     rethrow;
   }
+}
+
+Future<String> encryptMessage(String message, String publicKey) async {
+  final bytes = utf8.encode(message);
+  final base64 = base64Encode(bytes);
+  return await fast.RSA.encryptOAEP(base64, '', fast.Hash.SHA256, publicKey);
+}
+
+Future<String> decryptMessage(String message, String privateKey) async {
+  final base64 =
+      await fast.RSA.decryptOAEP(message, '', fast.Hash.SHA256, privateKey);
+  final bytes = base64Decode(base64);
+  return utf8.decode(bytes);
 }

@@ -6,7 +6,11 @@ import 'package:wallet/features/recover-keychain/page.dart';
 import 'package:wallet/features/recover-manual/page.dart';
 import 'package:wallet/global.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Global.init();
+
   runApp(const MyApp());
 }
 
