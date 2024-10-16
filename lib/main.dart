@@ -4,6 +4,7 @@ import 'package:wallet/features/backup-social/page.dart';
 import 'package:wallet/features/backup/page.dart';
 import 'package:wallet/features/recover-keychain/page.dart';
 import 'package:wallet/features/recover-manual/page.dart';
+import 'package:wallet/features/recover-social/page.dart';
 import 'package:wallet/global.dart';
 
 Future<void> main() async {
@@ -134,6 +135,18 @@ class _MyHomePageState extends State<MyHomePage> {
                             );
                           },
                           child: const Text('Keychain Recovery'),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      const SocialRecoveryPage()),
+                            );
+                          },
+                          child: const Text('Social Recovery'),
                         ),
                       ],
                     )
