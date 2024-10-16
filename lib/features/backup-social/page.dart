@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:wallet/features/backup-social/avatar.dart';
-import 'package:wallet/features/backup-social/handlers.dart';
 import 'package:wallet/global.dart';
 import 'package:wallet/utils.dart';
 import 'package:web_socket_channel/io.dart';
@@ -82,7 +81,11 @@ class SocialPageState extends State<SocialPage> {
         show(senderPin,
             "Peer sent you his backup key, click download button and store securely the encrypted backup key and your private key");
         break;
-
+      case "social_recover":
+        final senderPin = data["sender_pin"];
+        _peerEncryptedBackupKey = data["backup_key"];
+        show(senderPin, "Peer sent you back backup key, click download button");
+        break;
       case "disconnection_acknowledged":
         setState(() {
           _peerPin = '';
@@ -93,6 +96,22 @@ class SocialPageState extends State<SocialPage> {
       default:
         show('server', "Unknown event type: $eventType");
     }
+  }
+
+  void registerUser(WebSocketChannel channel, String publicKey) {
+    final registrationMessage = jsonEncode({
+      "type": "register",
+      "data": {"public_key": publicKey}
+    });
+    channel.sink.add(registrationMessage);
+  }
+
+  void disconnect(WebSocketChannel channel, String myPin) {
+    final disconnectMessage = jsonEncode({
+      "type": "disconnect",
+      "data": {"pin": myPin}
+    });
+    channel.sink.add(disconnectMessage);
   }
 
   void show(String author, String message) =>
