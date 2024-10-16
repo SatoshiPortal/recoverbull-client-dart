@@ -36,9 +36,9 @@ class SocialPageState extends State<SocialPage> {
 
   void _connectToWebSocket() {
     if (kIsWeb) {
-      channel = HtmlWebSocketChannel.connect('ws://localhost:8765');
+      channel = HtmlWebSocketChannel.connect(Global.websocketUrl);
     } else {
-      channel = IOWebSocketChannel.connect('ws://localhost:8765');
+      channel = IOWebSocketChannel.connect(Global.websocketUrl);
     }
 
     channel.stream.listen((message) => _handleWebSocketMessage(message));
