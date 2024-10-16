@@ -41,6 +41,8 @@ dependencies:
   file_saver: ^0.2.14
   file_picker: ^8.1.2
   web_socket_channel: ^3.0.1
+  flutter_dotenv: ^5.2.1
+  fast_rsa: ^3.6.6
 
 dev_dependencies:
   flutter_test:
@@ -65,7 +67,11 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
+  assets:
+    - .env
+    - packages/fast_rsa/web/assets/worker.js
+    - packages/fast_rsa/web/assets/wasm_exec.js
+    - packages/fast_rsa/web/assets/rsa.wasm
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 
