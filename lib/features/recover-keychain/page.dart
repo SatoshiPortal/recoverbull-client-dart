@@ -70,6 +70,7 @@ class _RecoverPageState extends State<KeychainRecoveryPage> {
       }),
     );
 
+    if (!mounted) return;
     if (response.statusCode == 200) {
       final body = jsonDecode(response.body);
       backupKey = body['private'];
@@ -77,6 +78,28 @@ class _RecoverPageState extends State<KeychainRecoveryPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Backup key recovered')),
       );
+    } else if (response.statusCode >= 400 && response.statusCode < 500) {
+      final body = jsonDecode(response.body);
+      final error = body['error'];
+      final cooldown = body['cooldown'];
+      final requestedAt = DateTime.tryParse(body['requested_at']);
+
+      if (cooldown != null && requestedAt != null) {
+        final cooledDown = requestedAt.add(Duration(minutes: cooldown));
+        final timeLeft = cooledDown.toUtc().difference(DateTime.now());
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: timeLeft.isNegative
+                ? Text('$error')
+                : Text('$error, try again in ${timeLeft.inSeconds} seconds'),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error)),
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to recover backup key')),
