@@ -54,7 +54,7 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        title: Text("${Global.branch} ${Global.commit.substring(0, 10)}"),
       ),
       body: Center(
         child: Column(

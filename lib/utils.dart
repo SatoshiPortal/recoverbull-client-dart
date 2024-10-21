@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:fast_rsa/fast_rsa.dart' as fast;
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart';
+import 'package:flutter/services.dart';
 
 Future<String> generateEncryptedBackup(
   String plaintext,
@@ -67,4 +68,11 @@ Future<String> decryptMessage(String message, String privateKey) async {
       await fast.RSA.decryptOAEP(message, '', fast.Hash.SHA256, privateKey);
   final bytes = base64Decode(base64);
   return utf8.decode(bytes);
+}
+
+Future<(String, String)> getBranchAndCommit() async {
+  final head = await rootBundle.loadString('.git/HEAD');
+  final commitId = await rootBundle.loadString('.git/ORIG_HEAD');
+  final branch = head.split('/').last;
+  return (branch.trim(), commitId.trim());
 }
