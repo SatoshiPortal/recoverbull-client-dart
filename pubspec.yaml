@@ -40,7 +40,7 @@ dependencies:
   http: ^1.2.2
   file_saver: ^0.2.14
   file_picker: ^8.1.2
-  web_socket_channel: ^3.0.1
+  # web_socket_channel: ^3.0.1
   flutter_dotenv: ^5.2.1
   fast_rsa: ^3.6.6
   rust_lib_wallet:

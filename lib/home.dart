@@ -6,6 +6,7 @@ import 'package:wallet/features/recover-keychain/page.dart';
 import 'package:wallet/features/recover-manual/page.dart';
 import 'package:wallet/features/recover-social/page.dart';
 import 'package:wallet/global.dart';
+import 'package:wallet/src/rust/api/nostr.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -65,16 +66,16 @@ class _MyHomePageState extends State<MyHomePage> {
                           child: const Text('Keychain Backup'),
                         ),
                         const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => const SocialPage()),
-                            );
-                          },
-                          child: const Text('Social Backup'),
-                        ),
+                        // ElevatedButton(
+                        //   onPressed: () {
+                        //     Navigator.push(
+                        //       context,
+                        //       MaterialPageRoute(
+                        //           builder: (context) => const SocialPage()),
+                        //     );
+                        //   },
+                        //   child: const Text('Social Backup'),
+                        // ),
                       ],
                     ),
                     Column(
@@ -103,17 +104,17 @@ class _MyHomePageState extends State<MyHomePage> {
                           child: const Text('Keychain Recovery'),
                         ),
                         const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) =>
-                                      const SocialRecoveryPage()),
-                            );
-                          },
-                          child: const Text('Social Recovery'),
-                        ),
+                        // ElevatedButton(
+                        //   onPressed: () {
+                        //     Navigator.push(
+                        //       context,
+                        //       MaterialPageRoute(
+                        //           builder: (context) =>
+                        //               const SocialRecoveryPage()),
+                        //     );
+                        //   },
+                        //   child: const Text('Social Recovery'),
+                        // ),
                       ],
                     )
                   ]),
