@@ -1,22 +1,40 @@
 PODS:
+  - fast_rsa (0.6.0):
+    - FlutterMacOS
+  - file_saver (0.0.1):
+    - FlutterMacOS
   - FlutterMacOS (1.0.0)
   - path_provider_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
+  - rust_lib_wallet (0.0.1):
+    - FlutterMacOS
 
 DEPENDENCIES:
+  - fast_rsa (from `Flutter/ephemeral/.symlinks/plugins/fast_rsa/macos`)
+  - file_saver (from `Flutter/ephemeral/.symlinks/plugins/file_saver/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
   - path_provider_foundation (from `Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin`)
+  - rust_lib_wallet (from `Flutter/ephemeral/.symlinks/plugins/rust_lib_wallet/macos`)
 
 EXTERNAL SOURCES:
+  fast_rsa:
+    :path: Flutter/ephemeral/.symlinks/plugins/fast_rsa/macos
+  file_saver:
+    :path: Flutter/ephemeral/.symlinks/plugins/file_saver/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
   path_provider_foundation:
     :path: Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin
+  rust_lib_wallet:
+    :path: Flutter/ephemeral/.symlinks/plugins/rust_lib_wallet/macos
 
 SPEC CHECKSUMS:
+  fast_rsa: 47a50bec1042c8c01726007dc0590a078418f997
+  file_saver: 44e6fbf666677faf097302460e214e977fdd977b
   FlutterMacOS: 8f6f14fa908a6fb3fba0cd85dbd81ec4b251fb24
   path_provider_foundation: 2b6b4c569c0fb62ec74538f866245ac84301af46
+  rust_lib_wallet: 107fc8c25ef812ce45b0cafa6ba38c9877057169
 
 PODFILE CHECKSUM: 236401fc2c932af29a9fcf0e97baeeb2d750d367
 

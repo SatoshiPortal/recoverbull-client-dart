@@ -16,6 +16,24 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  void test() {
+    var alice = generateNostrKeys();
+    var cipher = nip44Encrypt(
+        secretKey: alice.$1, publicKey: alice.$2, plaintext: "hello");
+    var plain = nip44Decrypt(
+        secretKey: alice.$1, publicKey: alice.$2, ciphertext: cipher);
+
+    print("alice $alice");
+    print("cipher: $cipher");
+    print("plain : $plain");
+  }
+
+  @override
+  void initState() {
+    test();
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
