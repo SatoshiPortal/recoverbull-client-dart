@@ -25,3 +25,8 @@ String nip44Decrypt(
         required String ciphertext}) =>
     RustLib.instance.api.crateApiNostrNip44Decrypt(
         secretKey: secretKey, publicKey: publicKey, ciphertext: ciphertext);
+
+String nip44ConversationKey(
+        {required String secretKey, required String publicKey}) =>
+    RustLib.instance.api.crateApiNostrNip44ConversationKey(
+        secretKey: secretKey, publicKey: publicKey);

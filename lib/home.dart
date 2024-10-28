@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:wallet/features/backup-keychain/page.dart';
-import 'package:wallet/features/backup-social/page.dart';
 import 'package:wallet/features/backup/page.dart';
 import 'package:wallet/features/recover-keychain/page.dart';
 import 'package:wallet/features/recover-manual/page.dart';
-import 'package:wallet/features/recover-social/page.dart';
 import 'package:wallet/global.dart';
 import 'package:wallet/src/rust/api/nostr.dart';
 
@@ -16,7 +14,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  void test() {
+  void test() async {
     var alice = generateNostrKeys();
     var cipher = nip44Encrypt(
         secretKey: alice.$1, publicKey: alice.$2, plaintext: "hello");

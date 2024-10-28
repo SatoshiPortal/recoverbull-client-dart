@@ -9,3 +9,4 @@ crate-type = ["cdylib", "staticlib"]
 [dependencies]
 flutter_rust_bridge = "=2.5.0"
 nostr = "0.35.0"
+nostr-sdk = "0.35.0"
