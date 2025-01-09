@@ -16,7 +16,7 @@ class ICloudStorage extends BackupStorage {
   }
 
   @override
-  Future<void> writeMetaData(List<int> data, String fileName) {
+  Future<bool> writeMetaData(List<int> data, String fileName) {
     // TODO: implement writeMetaData
     throw UnimplementedError();
   }
