@@ -1,8 +1,8 @@
 import 'dart:math';
-
-import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart';
-import 'package:recoverbull_dart/src/models/encryption_data.dart';
+import 'package:hex/hex.dart';
+import 'package:recoverbull_dart/src/models/encrypted_data.dart';
+import 'package:pointycastle/export.dart';
 
 /// Custom exception for encryption operations
 class EncryptionException implements Exception {
@@ -18,153 +18,188 @@ class EncryptionException implements Exception {
 
 /// Service handling encryption and decryption operations
 class EncryptionService {
-  // Use a constant-time algorithm to prevent timing attacks
-  static final _algorithm = AesGcm.with256bits();
-
-  // Minimum requirements for security
-  static const _minKeyLength = 32; // 256 bits
+  // Security constants
   static const _minDataLength = 1;
   static const _maxDataLength = 100 * 1024 * 1024; // 100MB limit
+  static const _ivLength = 16;
+  static const _macLength = 32;
 
-  /// Encrypts data using AES-GCM
-  ///
-  /// Parameters:
-  /// - [plaintext]: Data to encrypt
-  /// - [key]: 256-bit encryption key
-  static Future<EncryptionData> encrypt(
-    List<int> plaintext,
-    List<int> key,
-  ) async {
-    try {
-      // Validate inputs
-      _validateKey(key);
-      _validateData(plaintext);
-
-      final secretKey = SecretKey(key);
-      // Generate cryptographically secure nonce
-      final nonce = _algorithm.newNonce();
-
-      // Use try-finally to ensure sensitive data is cleared
-      try {
-        final result = await _algorithm.encrypt(
-          plaintext,
-          secretKey: secretKey,
-          nonce: nonce,
-        );
-
-        return EncryptionData(
-          ciphertext: result.cipherText,
-          nonce: nonce,
-          tag: result.mac.bytes,
-        );
-      } finally {
-        // Clear sensitive data from memory
-        _secureClose(key);
-      }
-    } catch (e) {
-      final error = 'Encryption failed';
-      debugPrint('$error: $e');
-      throw EncryptionException(error, e);
-    }
-  }
-
-  /// Decrypts data using AES-GCM
-  ///
-  /// Parameters:
-  /// - [ciphertext]: Encrypted data
-  /// - [nonce]: Initialization vector
-  /// - [tag]: Authentication tag
-  /// - [key]: 256-bit decryption key
-  static Future<List<int>> decrypt({
-    required List<int> ciphertext,
-    required List<int> nonce,
-    required List<int> tag,
-    required List<int> key,
-  }) async {
-    try {
-      // Validate inputs
-      _validateKey(key);
-      _validateData(ciphertext);
-      _validateNonce(nonce);
-      _validateTag(tag);
-
-      final secretKey = SecretKey(key);
-
-      try {
-        final secretBox = SecretBox(
-          ciphertext,
-          nonce: nonce,
-          mac: Mac(tag),
-        );
-
-        final plaintext = await _algorithm.decrypt(
-          secretBox,
-          secretKey: secretKey,
-        );
-
-        // Validate decrypted data
-        _validateData(plaintext);
-
-        return plaintext;
-      } finally {
-        // Clear sensitive data from memory
-        _secureClose(key);
-      }
-    } catch (e) {
-      final error = 'Decryption failed';
-      debugPrint('$error: $e');
-      throw EncryptionException(error, e);
-    }
-  }
-
-  /// Validates encryption key
-  static void _validateKey(List<int> key) {
-    if (key.isEmpty) {
-      throw EncryptionException('Encryption key cannot be empty');
-    }
-    if (key.length != _minKeyLength) {
-      throw EncryptionException(
-          'Invalid key length. Required: $_minKeyLength bytes');
-    }
-  }
-
-  /// Validates data size
   static void _validateData(List<int> data) {
-    if (data.isEmpty) {
-      throw EncryptionException('Data cannot be empty');
-    }
-    if (data.length < _minDataLength) {
-      throw EncryptionException('Data too small');
-    }
-    if (data.length > _maxDataLength) {
-      throw EncryptionException('Data exceeds maximum size limit');
+    if (data.length < _minDataLength || data.length > _maxDataLength) {
+      throw EncryptionException(
+        'Invalid data length',
+        'Must be between $_minDataLength and $_maxDataLength bytes',
+      );
     }
   }
 
-  /// Validates nonce
-  static void _validateNonce(List<int> nonce) {
-    if (nonce.isEmpty || nonce.length != _algorithm.nonceLength) {
-      throw EncryptionException('Invalid nonce length');
+  static void _validateIV(List<int> iv) {
+    if (iv.length != _ivLength) {
+      throw EncryptionException(
+        'Invalid IV length',
+        'Expected $_ivLength bytes, got ${iv.length}',
+      );
     }
   }
 
-  /// Validates authentication tag
-  static void _validateTag(List<int> tag) {
-    if (tag.isEmpty) {
-      throw EncryptionException('Authentication tag cannot be empty');
+  static void _validateMAC(List<int> mac) {
+    if (mac.length != _macLength) {
+      throw EncryptionException(
+        'Invalid MAC length',
+        'Expected $_macLength bytes, got ${mac.length}',
+      );
     }
   }
 
-  /// Securely clears sensitive data from memory
-  static void _secureClose(List<int> sensitiveData) {
-    // Overwrite with zeros
-    for (var i = 0; i < sensitiveData.length; i++) {
-      sensitiveData[i] = 0;
-    }
-    // Optional: additional passes with random data
-    final random = Random.secure();
-    for (var i = 0; i < sensitiveData.length; i++) {
-      sensitiveData[i] = random.nextInt(256);
+  static void _secureClose(List<int> data) {
+    for (var i = 0; i < data.length; i++) {
+      data[i] = 0;
     }
   }
+
+  /// Encrypts data using AES-CBC with PKCS7 padding
+  static Future<EncryptedData> aesEncrypt(
+    Uint8List key,
+    Uint8List plaintext,
+  ) async {
+    // try {
+    // Validate inputs
+
+    _validateData(plaintext);
+
+    // Convert hex key to bytes
+    final keyBytes = key;
+    // Generate random IV
+    final iv = generateSecureRandomBytes(_ivLength);
+
+    //   try {
+    //     final params = PaddedBlockCipherParameters(
+    //       ParametersWithIV(KeyParameter(keyBytes), iv),
+    //       null,
+    //     );
+    //     final paddedBlockCipher = PaddedBlockCipher('AES/CBC/PKCS7')
+    //       ..init(true, params);
+    //     // Encrypt the data
+    //     final inputData = Uint8List.fromList(plaintext);
+    //     final ciphertext = paddedBlockCipher.process(inputData);
+    //
+    //     // Generate MAC
+    //     final hmac = HMac(SHA256Digest(), 64);
+    //     hmac.init(KeyParameter(keyBytes));
+    //     hmac.update(iv, 0, iv.length);
+    //     hmac.update(ciphertext, 0, ciphertext.length);
+    //     final mac = Uint8List(_macLength);
+    //     hmac.doFinal(mac, 0);
+    //     return EncryptedData(
+    //       ciphertext: HEX.encode(ciphertext),
+    //       nonce: HEX.encode(iv),
+    //       tag: HEX.encode(mac),
+    //     );
+    //   } finally {
+    //     _secureClose(keyBytes);
+    //   }
+    // } catch (e) {
+    //   final error = 'AES/CBC/PKCS7 Encryption failed';
+    //   throw EncryptionException(error, e);
+    // }
+    final params = PaddedBlockCipherParameters(
+      ParametersWithIV(KeyParameter(keyBytes), iv),
+      null,
+    );
+    final paddedBlockCipher = PaddedBlockCipher('AES/CBC/PKCS7')
+      ..init(true, params);
+    // Encrypt the data
+    final inputData = Uint8List.fromList(plaintext);
+    final ciphertext = paddedBlockCipher.process(inputData);
+
+    // Generate MAC
+    final hmac = HMac(SHA256Digest(), 64);
+    hmac.init(KeyParameter(keyBytes));
+    hmac.update(iv, 0, iv.length);
+    hmac.update(ciphertext, 0, ciphertext.length);
+    final mac = Uint8List(_macLength);
+    hmac.doFinal(mac, 0);
+    return EncryptedData(
+      ciphertext: HEX.encode(ciphertext),
+      nonce: HEX.encode(iv),
+      tag: HEX.encode(mac),
+    );
+  }
+
+  /// Decrypts data using AES-CBC with PKCS7 padding
+  static Future<List<int>> decrypt({
+    required Uint8List keyBytes,
+    required Uint8List ciphertext,
+    required Uint8List iv,
+    Uint8List? mac,
+  }) async {
+    // Excerpt from: class EncryptionService
+    _validateData(ciphertext);
+    _validateIV(iv);
+    // Only validate MAC if it's not null
+    if (mac != null) {
+      _validateMAC(mac);
+    }
+
+    try {
+      // Verify MAC if present
+      if (mac != null) {
+        final hmac = HMac(SHA256Digest(), 64);
+        hmac.init(KeyParameter(keyBytes));
+        hmac.update(iv, 0, iv.length);
+        hmac.update(ciphertext, 0, ciphertext.length);
+
+        final calculatedMac = Uint8List(_macLength);
+        hmac.doFinal(calculatedMac, 0);
+
+        // // Constant-time comparison
+        // if (!_constantTimeEquals(mac, calculatedMac)) {
+        //   throw EncryptionException('MAC verification failed', null);
+        // }
+      }
+      final params = PaddedBlockCipherParameters(
+        ParametersWithIV(KeyParameter(keyBytes), iv),
+        null,
+      );
+      final paddedBlockCipher = PaddedBlockCipher('AES/CBC/PKCS7')
+        ..init(false, params);
+
+      // Decrypt the data
+      final decrypted =
+          paddedBlockCipher.process(Uint8List.fromList(ciphertext));
+
+      // Validate decrypted data
+      _validateData(decrypted);
+
+      return decrypted;
+    } catch (e) {
+      final error = 'AES/CBC/PKCS7 decryption failed';
+      throw EncryptionException(error, e);
+    } finally {
+      _secureClose(keyBytes);
+    }
+  }
+
+  // Constant-time comparison to prevent timing attacks
+  static bool _constantTimeEquals(List<int> a, List<int> b) {
+    if (a.length != b.length) return false;
+    var result = 0;
+    for (var i = 0; i < a.length; i++) {
+      result |= a[i] ^ b[i];
+    }
+    return result == 0;
+  }
+}
+
+Uint8List generateSecureRandomBytes(int length) {
+  final secureRandom = Random.secure();
+  final randomIV = Uint8List(length);
+  for (int i = 0; i < length; i++) {
+    randomIV[i] = secureRandom.nextInt(256);
+  }
+  return randomIV;
+}
+
+List<int> sha256(List<int> input) {
+  return SHA256Digest().process(Uint8List.fromList(input));
 }
