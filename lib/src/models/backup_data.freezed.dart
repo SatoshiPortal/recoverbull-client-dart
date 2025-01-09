@@ -20,13 +20,14 @@ BackupMetadata _$BackupMetadataFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$BackupMetadata {
-  int get version => throw _privateConstructorUsedError;
+  /// Unique identifier for the backup
   String get backupId => throw _privateConstructorUsedError;
-  String get keyId => throw _privateConstructorUsedError;
+
+  /// Encryption data used to secure the backup
+  EncryptedData get encryptedData => throw _privateConstructorUsedError;
+
+  /// Unix timestamp (in seconds) when the backup was created
   int get createdAt => throw _privateConstructorUsedError;
-  String get nonce => throw _privateConstructorUsedError;
-  String get ciphertext => throw _privateConstructorUsedError;
-  String? get tag => throw _privateConstructorUsedError;
 
   /// Serializes this BackupMetadata to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -44,14 +45,9 @@ abstract class $BackupMetadataCopyWith<$Res> {
           BackupMetadata value, $Res Function(BackupMetadata) then) =
       _$BackupMetadataCopyWithImpl<$Res, BackupMetadata>;
   @useResult
-  $Res call(
-      {int version,
-      String backupId,
-      String keyId,
-      int createdAt,
-      String nonce,
-      String ciphertext,
-      String? tag});
+  $Res call({String backupId, EncryptedData encryptedData, int createdAt});
+
+  $EncryptedDataCopyWith<$Res> get encryptedData;
 }
 
 /// @nodoc
@@ -69,44 +65,34 @@ class _$BackupMetadataCopyWithImpl<$Res, $Val extends BackupMetadata>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? version = null,
     Object? backupId = null,
-    Object? keyId = null,
+    Object? encryptedData = null,
     Object? createdAt = null,
-    Object? nonce = null,
-    Object? ciphertext = null,
-    Object? tag = freezed,
   }) {
     return _then(_value.copyWith(
-      version: null == version
-          ? _value.version
-          : version // ignore: cast_nullable_to_non_nullable
-              as int,
       backupId: null == backupId
           ? _value.backupId
           : backupId // ignore: cast_nullable_to_non_nullable
               as String,
-      keyId: null == keyId
-          ? _value.keyId
-          : keyId // ignore: cast_nullable_to_non_nullable
-              as String,
+      encryptedData: null == encryptedData
+          ? _value.encryptedData
+          : encryptedData // ignore: cast_nullable_to_non_nullable
+              as EncryptedData,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as int,
-      nonce: null == nonce
-          ? _value.nonce
-          : nonce // ignore: cast_nullable_to_non_nullable
-              as String,
-      ciphertext: null == ciphertext
-          ? _value.ciphertext
-          : ciphertext // ignore: cast_nullable_to_non_nullable
-              as String,
-      tag: freezed == tag
-          ? _value.tag
-          : tag // ignore: cast_nullable_to_non_nullable
-              as String?,
     ) as $Val);
+  }
+
+  /// Create a copy of BackupMetadata
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $EncryptedDataCopyWith<$Res> get encryptedData {
+    return $EncryptedDataCopyWith<$Res>(_value.encryptedData, (value) {
+      return _then(_value.copyWith(encryptedData: value) as $Val);
+    });
   }
 }
 
@@ -118,14 +104,10 @@ abstract class _$$BackupMetadataImplCopyWith<$Res>
       __$$BackupMetadataImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {int version,
-      String backupId,
-      String keyId,
-      int createdAt,
-      String nonce,
-      String ciphertext,
-      String? tag});
+  $Res call({String backupId, EncryptedData encryptedData, int createdAt});
+
+  @override
+  $EncryptedDataCopyWith<$Res> get encryptedData;
 }
 
 /// @nodoc
@@ -141,82 +123,53 @@ class __$$BackupMetadataImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? version = null,
     Object? backupId = null,
-    Object? keyId = null,
+    Object? encryptedData = null,
     Object? createdAt = null,
-    Object? nonce = null,
-    Object? ciphertext = null,
-    Object? tag = freezed,
   }) {
     return _then(_$BackupMetadataImpl(
-      version: null == version
-          ? _value.version
-          : version // ignore: cast_nullable_to_non_nullable
-              as int,
       backupId: null == backupId
           ? _value.backupId
           : backupId // ignore: cast_nullable_to_non_nullable
               as String,
-      keyId: null == keyId
-          ? _value.keyId
-          : keyId // ignore: cast_nullable_to_non_nullable
-              as String,
+      encryptedData: null == encryptedData
+          ? _value.encryptedData
+          : encryptedData // ignore: cast_nullable_to_non_nullable
+              as EncryptedData,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as int,
-      nonce: null == nonce
-          ? _value.nonce
-          : nonce // ignore: cast_nullable_to_non_nullable
-              as String,
-      ciphertext: null == ciphertext
-          ? _value.ciphertext
-          : ciphertext // ignore: cast_nullable_to_non_nullable
-              as String,
-      tag: freezed == tag
-          ? _value.tag
-          : tag // ignore: cast_nullable_to_non_nullable
-              as String?,
     ));
   }
 }
 
 /// @nodoc
 @JsonSerializable()
-class _$BackupMetadataImpl extends _BackupMetadata {
-  _$BackupMetadataImpl(
-      {this.version = 1,
-      required this.backupId,
-      required this.keyId,
-      required this.createdAt,
-      required this.nonce,
-      required this.ciphertext,
-      this.tag})
-      : super._();
+class _$BackupMetadataImpl implements _BackupMetadata {
+  const _$BackupMetadataImpl(
+      {required this.backupId,
+      required this.encryptedData,
+      required this.createdAt});
 
   factory _$BackupMetadataImpl.fromJson(Map<String, dynamic> json) =>
       _$$BackupMetadataImplFromJson(json);
 
-  @override
-  @JsonKey()
-  final int version;
+  /// Unique identifier for the backup
   @override
   final String backupId;
+
+  /// Encryption data used to secure the backup
   @override
-  final String keyId;
+  final EncryptedData encryptedData;
+
+  /// Unix timestamp (in seconds) when the backup was created
   @override
   final int createdAt;
-  @override
-  final String nonce;
-  @override
-  final String ciphertext;
-  @override
-  final String? tag;
 
   @override
   String toString() {
-    return 'BackupMetadata(version: $version, backupId: $backupId, keyId: $keyId, createdAt: $createdAt, nonce: $nonce, ciphertext: $ciphertext, tag: $tag)';
+    return 'BackupMetadata(backupId: $backupId, encryptedData: $encryptedData, createdAt: $createdAt)';
   }
 
   @override
@@ -224,22 +177,18 @@ class _$BackupMetadataImpl extends _BackupMetadata {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$BackupMetadataImpl &&
-            (identical(other.version, version) || other.version == version) &&
             (identical(other.backupId, backupId) ||
                 other.backupId == backupId) &&
-            (identical(other.keyId, keyId) || other.keyId == keyId) &&
+            (identical(other.encryptedData, encryptedData) ||
+                other.encryptedData == encryptedData) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt) &&
-            (identical(other.nonce, nonce) || other.nonce == nonce) &&
-            (identical(other.ciphertext, ciphertext) ||
-                other.ciphertext == ciphertext) &&
-            (identical(other.tag, tag) || other.tag == tag));
+                other.createdAt == createdAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType, version, backupId, keyId, createdAt, nonce, ciphertext, tag);
+  int get hashCode =>
+      Object.hash(runtimeType, backupId, encryptedData, createdAt);
 
   /// Create a copy of BackupMetadata
   /// with the given fields replaced by the non-null parameter values.
@@ -258,34 +207,26 @@ class _$BackupMetadataImpl extends _BackupMetadata {
   }
 }
 
-abstract class _BackupMetadata extends BackupMetadata {
-  factory _BackupMetadata(
-      {final int version,
-      required final String backupId,
-      required final String keyId,
-      required final int createdAt,
-      required final String nonce,
-      required final String ciphertext,
-      final String? tag}) = _$BackupMetadataImpl;
-  _BackupMetadata._() : super._();
+abstract class _BackupMetadata implements BackupMetadata {
+  const factory _BackupMetadata(
+      {required final String backupId,
+      required final EncryptedData encryptedData,
+      required final int createdAt}) = _$BackupMetadataImpl;
 
   factory _BackupMetadata.fromJson(Map<String, dynamic> json) =
       _$BackupMetadataImpl.fromJson;
 
-  @override
-  int get version;
+  /// Unique identifier for the backup
   @override
   String get backupId;
+
+  /// Encryption data used to secure the backup
   @override
-  String get keyId;
+  EncryptedData get encryptedData;
+
+  /// Unix timestamp (in seconds) when the backup was created
   @override
   int get createdAt;
-  @override
-  String get nonce;
-  @override
-  String get ciphertext;
-  @override
-  String? get tag;
 
   /// Create a copy of BackupMetadata
   /// with the given fields replaced by the non-null parameter values.

@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:recoverbull_dart/src/models/encrypted_data.dart';
 part 'backup_data.freezed.dart';
 part 'backup_data.g.dart';
 
@@ -9,25 +10,16 @@ part 'backup_data.g.dart';
 @freezed
 class BackupMetadata with _$BackupMetadata {
   /// Creates a new [BackupMetadata] instance.
-  ///
-  /// Parameters:
-  /// - [version]: The schema version of the backup metadata (defaults to 1)
-  /// - [backupId]: Unique identifier for this backup
-  /// - [keyId]: Identifier for the encryption key used
-  /// - [createdAt]: Unix timestamp (in seconds) when the backup was created
-  /// - [nonce]: Cryptographic nonce used for encryption
-  /// - [ciphertext]: The encrypted backup data
-  /// - [tag]: Optional authentication tag for the encrypted data
-  factory BackupMetadata({
-    @Default(1) int version,
+  const factory BackupMetadata({
+    /// Unique identifier for the backup
     required String backupId,
-    required String keyId,
+
+    /// Encryption data used to secure the backup
+    required EncryptedData encryptedData,
+
+    /// Unix timestamp (in seconds) when the backup was created
     required int createdAt,
-    required String nonce,
-    required String ciphertext,
-    String? tag,
   }) = _BackupMetadata;
-  BackupMetadata._();
 
   /// Creates a [BackupMetadata] instance from a JSON map.
   ///

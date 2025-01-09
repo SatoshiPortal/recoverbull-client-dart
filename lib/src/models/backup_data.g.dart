@@ -8,23 +8,16 @@ part of 'backup_data.dart';
 
 _$BackupMetadataImpl _$$BackupMetadataImplFromJson(Map<String, dynamic> json) =>
     _$BackupMetadataImpl(
-      version: (json['version'] as num?)?.toInt() ?? 1,
       backupId: json['backupId'] as String,
-      keyId: json['keyId'] as String,
+      encryptedData:
+          EncryptedData.fromJson(json['encryptedData'] as Map<String, dynamic>),
       createdAt: (json['createdAt'] as num).toInt(),
-      nonce: json['nonce'] as String,
-      ciphertext: json['ciphertext'] as String,
-      tag: json['tag'] as String?,
     );
 
 Map<String, dynamic> _$$BackupMetadataImplToJson(
         _$BackupMetadataImpl instance) =>
     <String, dynamic>{
-      'version': instance.version,
       'backupId': instance.backupId,
-      'keyId': instance.keyId,
+      'encryptedData': instance.encryptedData,
       'createdAt': instance.createdAt,
-      'nonce': instance.nonce,
-      'ciphertext': instance.ciphertext,
-      'tag': instance.tag,
     };
