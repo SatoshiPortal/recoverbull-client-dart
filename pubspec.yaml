@@ -15,11 +15,13 @@ dependencies:
   freezed_annotation: ^2.4.4
   freezed: ^2.4.5
   json_annotation: ^4.9.0
-  http: ^1.2.2
   google_sign_in: ^6.2.2
   googleapis: ^13.2.0
   flutter_dotenv: ^5.2.1
   logger: ^2.5.0
+  pointycastle: ^3.9.1
+  hex: ^0.2.0
+  dio: ^5.7.0
 
 dev_dependencies:
   flutter_test:
