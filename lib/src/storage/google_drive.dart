@@ -75,8 +75,7 @@ class GoogleDriveStorage extends BackupStorage {
       // Add restricted permission for the owner
       await _driveApi.permissions.create(
         Permission()
-          ..allowFileDiscovery = false
-          ..role = 'writer'
+          ..role = 'owner'
           ..type = 'user'
           ..emailAddress = _account.email,
         folderId,
