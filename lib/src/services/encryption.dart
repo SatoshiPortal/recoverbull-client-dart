@@ -59,7 +59,7 @@ class EncryptionService {
 
   /// Encrypts data using AES-CBC with PKCS7 padding
   static Future<EncryptedData> aesEncrypt(
-    Uint8List key,
+    Uint8List keyBytes,
     Uint8List plaintext,
   ) async {
     // try {
@@ -67,41 +67,9 @@ class EncryptionService {
 
     _validateData(plaintext);
 
-    // Convert hex key to bytes
-    final keyBytes = key;
     // Generate random IV
     final iv = generateSecureRandomBytes(_ivLength);
 
-    //   try {
-    //     final params = PaddedBlockCipherParameters(
-    //       ParametersWithIV(KeyParameter(keyBytes), iv),
-    //       null,
-    //     );
-    //     final paddedBlockCipher = PaddedBlockCipher('AES/CBC/PKCS7')
-    //       ..init(true, params);
-    //     // Encrypt the data
-    //     final inputData = Uint8List.fromList(plaintext);
-    //     final ciphertext = paddedBlockCipher.process(inputData);
-    //
-    //     // Generate MAC
-    //     final hmac = HMac(SHA256Digest(), 64);
-    //     hmac.init(KeyParameter(keyBytes));
-    //     hmac.update(iv, 0, iv.length);
-    //     hmac.update(ciphertext, 0, ciphertext.length);
-    //     final mac = Uint8List(_macLength);
-    //     hmac.doFinal(mac, 0);
-    //     return EncryptedData(
-    //       ciphertext: HEX.encode(ciphertext),
-    //       nonce: HEX.encode(iv),
-    //       tag: HEX.encode(mac),
-    //     );
-    //   } finally {
-    //     _secureClose(keyBytes);
-    //   }
-    // } catch (e) {
-    //   final error = 'AES/CBC/PKCS7 Encryption failed';
-    //   throw EncryptionException(error, e);
-    // }
     final params = PaddedBlockCipherParameters(
       ParametersWithIV(KeyParameter(keyBytes), iv),
       null,
