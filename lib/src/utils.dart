@@ -17,8 +17,12 @@ List<int> deriveBip85({required String xprv, required String path}) {
   // This is a dummy implementation for demonstration purposes.
   //
   //TODO; Finalize the derivation key length
+  try {
   final derived = derive(xprv: xprv, path: path).sublist(0, 32);
   return derived;
+  } catch (e) {
+    throw BackupException('Failed to derive backup key: ${e.toString()}');
+  }
 }
 
 //TODO; verify if both netowrktype values are correct
