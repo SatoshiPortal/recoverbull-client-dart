@@ -41,10 +41,7 @@ class BackupService {
   /// - The backup key is invalid hex
   /// - The encryption process fails
   /// - The metadata creation or encoding fails
-  static Future<String> createBackup(
-    String plaintext,
-    String backupKey,
-  ) async {
+  static Future<String> createBackup(String plaintext, String backupKey) async {
     try {
       // Validate inputs
       final plainTextBytes = utf8.encode(plaintext);
@@ -61,7 +58,7 @@ class BackupService {
       }
 
       // Generate backup ID and encrypt data
-      final backupId = HEX.encode(generateRandomSalt(length: 32));
+      final backupId = HEX.encode(generateRandomBytes(length: 32));
       debugPrint('Creating backup: $backupId');
 
       final encResult = await EncryptionService.aesEncrypt(
@@ -126,7 +123,7 @@ class BackupService {
           networkType: network.networkType);
 
       // Generate backup ID
-      final backupId = HEX.encode(generateRandomSalt(length: 32));
+      final backupId = HEX.encode(generateRandomBytes(length: 32));
       debugPrint('Creating backup: $backupId');
 
       // Derive backup key and encrypt data

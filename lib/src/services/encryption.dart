@@ -1,8 +1,8 @@
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
 import 'package:recoverbull/src/models/encrypted_data.dart';
 import 'package:pointycastle/export.dart';
+import 'package:recoverbull/src/utils.dart';
 
 /// Custom exception for encryption operations
 class EncryptionException implements Exception {
@@ -68,7 +68,7 @@ class EncryptionService {
     _validateData(plaintext);
 
     // Generate random IV
-    final iv = generateSecureRandomBytes(_ivLength);
+    final iv = generateRandomBytes(length: _ivLength);
 
     final params = PaddedBlockCipherParameters(
       ParametersWithIV(KeyParameter(keyBytes), iv),
@@ -120,10 +120,10 @@ class EncryptionService {
         final calculatedMac = Uint8List(_macLength);
         hmac.doFinal(calculatedMac, 0);
 
-        // // Constant-time comparison
-        // if (!_constantTimeEquals(mac, calculatedMac)) {
-        //   throw EncryptionException('MAC verification failed', null);
-        // }
+        // Constant-time comparison
+        if (!_constantTimeEquals(mac, calculatedMac)) {
+          throw EncryptionException('MAC verification failed', null);
+        }
       }
       final params = PaddedBlockCipherParameters(
         ParametersWithIV(KeyParameter(keyBytes), iv),
@@ -157,15 +157,6 @@ class EncryptionService {
     }
     return result == 0;
   }
-}
-
-Uint8List generateSecureRandomBytes(int length) {
-  final secureRandom = Random.secure();
-  final randomIV = Uint8List(length);
-  for (int i = 0; i < length; i++) {
-    randomIV[i] = secureRandom.nextInt(256);
-  }
-  return randomIV;
 }
 
 List<int> sha256(List<int> input) {

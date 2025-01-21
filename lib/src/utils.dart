@@ -8,20 +8,16 @@ import 'package:hex/hex.dart';
 import 'package:pointycastle/digests/sha256.dart';
 import 'package:recoverbull/recoverbull.dart';
 
-Uint8List generateRandomSalt({int length = 32}) {
+Uint8List generateRandomBytes({int length = 32}) {
   final secureRandom = Random.secure();
-  final saltBytes = Uint8List(length);
+  final bytes = Uint8List(length);
   for (int i = 0; i < length; i++) {
-    saltBytes[i] = secureRandom.nextInt(256);
+    bytes[i] = secureRandom.nextInt(256);
   }
-  return saltBytes;
+  return bytes;
 }
 
 List<int> deriveBip85({required String xprv, required String path}) {
-  //TODO: Implement actual derivation logic
-  // This is a dummy implementation for demonstration purposes.
-  //
-  //TODO; Finalize the derivation key length
   try {
     final derived = derive(xprv: xprv, path: path).sublist(0, 32);
     return derived;
@@ -30,7 +26,6 @@ List<int> deriveBip85({required String xprv, required String path}) {
   }
 }
 
-//TODO; verify if both netowrktype values are correct
 extension Bip32NetworkTypeParser on String? {
   bip32.NetworkType get networkType {
     return (this == "mainnet" || this == null)
