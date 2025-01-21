@@ -1,5 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:recoverbull_dart/src/models/encrypted_data.dart';
+import 'package:recoverbull/src/models/encrypted_data.dart';
 part 'backup_data.freezed.dart';
 part 'backup_data.g.dart';
 

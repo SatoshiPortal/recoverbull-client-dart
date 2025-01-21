@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/rendering.dart';
-import 'package:recoverbull_dart/src/utils.dart';
+import 'package:recoverbull/src/utils.dart';
 
 /// Custom exception for key management operations
 class KeyManagementException implements Exception {

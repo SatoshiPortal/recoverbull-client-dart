@@ -6,7 +6,7 @@ import 'package:bip39_mnemonic/bip39_mnemonic.dart' as bip39;
 import 'package:bip85/bip85.dart';
 import 'package:hex/hex.dart';
 import 'package:pointycastle/digests/sha256.dart';
-import 'package:recoverbull_dart/recoverbull_dart.dart';
+import 'package:recoverbull/recoverbull.dart';
 
 Uint8List generateRandomSalt({int length = 32}) {
   final secureRandom = Random.secure();

@@ -1,6 +1,6 @@
 # Recoverbull Dart
 
-`recoverbull_dart` is a project designed to facilitate secure backup and recovery of data using encryption and key management techniques. It supports creating encrypted backups, restoring data from backups, and managing keys with a remote server.
+`recoverbull` is a project designed to facilitate secure backup and recovery of data using encryption and key management techniques. It supports creating encrypted backups, restoring data from backups, and managing keys with a remote server.
 
 ## Features
 
@@ -12,11 +12,11 @@
 
 ## Installation
 
-Add `recoverbull_dart` to your `pubspec.yaml` file:
+Add `recoverbull` to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  recoverbull_dart:
+  recoverbull:
     git:
-      url: https://github.com/StaxoLotl/recoverbull-dart.git
-      ref: master
+      url: https://github.com/SatoshiPortal/recoverbull-client-dart.git
+      ref: main

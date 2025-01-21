@@ -1,7 +1,7 @@
-name: recoverbull_dart
+name: recoverbull
 description: "A new Flutter package project."
-version: 0.0.1
-homepage: "https://github.com/StaxoLotl/recoverbull-dart.git"
+version: 1.0.0
+homepage: "https://github.com/SatoshiPortal/recoverbull-client-dart"
 publish_to: "none"
 environment:
   sdk: ^3.6.0

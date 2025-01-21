@@ -3,11 +3,11 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hex/hex.dart';
-import 'package:recoverbull_dart/src/models/backup_data.dart';
-import 'package:recoverbull_dart/src/services/encryption.dart';
+import 'package:recoverbull/src/models/backup_data.dart';
+import 'package:recoverbull/src/services/encryption.dart';
 import 'package:bip39_mnemonic/bip39_mnemonic.dart' as bip39;
 import 'package:bip32/bip32.dart' as bip32;
-import 'package:recoverbull_dart/src/utils.dart';
+import 'package:recoverbull/src/utils.dart';
 
 /// Exception specific to backup operations
 class BackupException implements Exception {

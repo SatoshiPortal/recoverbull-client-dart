@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:hex/hex.dart';
-import 'package:recoverbull_dart/src/models/encrypted_data.dart';
+import 'package:recoverbull/src/models/encrypted_data.dart';
 import 'package:pointycastle/export.dart';
 
 /// Custom exception for encryption operations
