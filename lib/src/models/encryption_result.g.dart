@@ -1,21 +1,23 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'encrypted_data.dart';
+part of 'encryption_result.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$EncryptedDataImpl _$$EncryptedDataImplFromJson(Map<String, dynamic> json) =>
-    _$EncryptedDataImpl(
+_$EncryptionResultImpl _$$EncryptionResultImplFromJson(
+        Map<String, dynamic> json) =>
+    _$EncryptionResultImpl(
       nonce: json['nonce'] as String,
       ciphertext: json['ciphertext'] as String,
-      tag: json['tag'] as String?,
+      mac: json['mac'] as String,
     );
 
-Map<String, dynamic> _$$EncryptedDataImplToJson(_$EncryptedDataImpl instance) =>
+Map<String, dynamic> _$$EncryptionResultImplToJson(
+        _$EncryptionResultImpl instance) =>
     <String, dynamic>{
       'nonce': instance.nonce,
       'ciphertext': instance.ciphertext,
-      'tag': instance.tag,
+      'mac': instance.mac,
     };

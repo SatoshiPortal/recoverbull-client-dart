@@ -3,7 +3,7 @@
 // ignore_for_file: type=lint
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
-part of 'encrypted_data.dart';
+part of 'encryption_result.dart';
 
 // **************************************************************************
 // FreezedGenerator
@@ -14,57 +14,57 @@ T _$identity<T>(T value) => value;
 final _privateConstructorUsedError = UnsupportedError(
     'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
-EncryptedData _$EncryptedDataFromJson(Map<String, dynamic> json) {
-  return _EncryptedData.fromJson(json);
+EncryptionResult _$EncryptionResultFromJson(Map<String, dynamic> json) {
+  return _EncryptionResult.fromJson(json);
 }
 
 /// @nodoc
-mixin _$EncryptedData {
+mixin _$EncryptionResult {
   String get nonce => throw _privateConstructorUsedError;
 
   /// - [ciphertext]: The encrypted backup data
   String get ciphertext => throw _privateConstructorUsedError;
 
-  /// - [tag]: Optional authentication tag for the encrypted data
-  String? get tag => throw _privateConstructorUsedError;
+  /// - [mac]: authentication mac for the encrypted data
+  String get mac => throw _privateConstructorUsedError;
 
-  /// Serializes this EncryptedData to a JSON map.
+  /// Serializes this EncryptionResult to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
-  /// Create a copy of EncryptedData
+  /// Create a copy of EncryptionResult
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
-  $EncryptedDataCopyWith<EncryptedData> get copyWith =>
+  $EncryptionResultCopyWith<EncryptionResult> get copyWith =>
       throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class $EncryptedDataCopyWith<$Res> {
-  factory $EncryptedDataCopyWith(
-          EncryptedData value, $Res Function(EncryptedData) then) =
-      _$EncryptedDataCopyWithImpl<$Res, EncryptedData>;
+abstract class $EncryptionResultCopyWith<$Res> {
+  factory $EncryptionResultCopyWith(
+          EncryptionResult value, $Res Function(EncryptionResult) then) =
+      _$EncryptionResultCopyWithImpl<$Res, EncryptionResult>;
   @useResult
-  $Res call({String nonce, String ciphertext, String? tag});
+  $Res call({String nonce, String ciphertext, String mac});
 }
 
 /// @nodoc
-class _$EncryptedDataCopyWithImpl<$Res, $Val extends EncryptedData>
-    implements $EncryptedDataCopyWith<$Res> {
-  _$EncryptedDataCopyWithImpl(this._value, this._then);
+class _$EncryptionResultCopyWithImpl<$Res, $Val extends EncryptionResult>
+    implements $EncryptionResultCopyWith<$Res> {
+  _$EncryptionResultCopyWithImpl(this._value, this._then);
 
   // ignore: unused_field
   final $Val _value;
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of EncryptedData
+  /// Create a copy of EncryptionResult
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
     Object? nonce = null,
     Object? ciphertext = null,
-    Object? tag = freezed,
+    Object? mac = null,
   }) {
     return _then(_value.copyWith(
       nonce: null == nonce
@@ -75,43 +75,43 @@ class _$EncryptedDataCopyWithImpl<$Res, $Val extends EncryptedData>
           ? _value.ciphertext
           : ciphertext // ignore: cast_nullable_to_non_nullable
               as String,
-      tag: freezed == tag
-          ? _value.tag
-          : tag // ignore: cast_nullable_to_non_nullable
-              as String?,
+      mac: null == mac
+          ? _value.mac
+          : mac // ignore: cast_nullable_to_non_nullable
+              as String,
     ) as $Val);
   }
 }
 
 /// @nodoc
-abstract class _$$EncryptedDataImplCopyWith<$Res>
-    implements $EncryptedDataCopyWith<$Res> {
-  factory _$$EncryptedDataImplCopyWith(
-          _$EncryptedDataImpl value, $Res Function(_$EncryptedDataImpl) then) =
-      __$$EncryptedDataImplCopyWithImpl<$Res>;
+abstract class _$$EncryptionResultImplCopyWith<$Res>
+    implements $EncryptionResultCopyWith<$Res> {
+  factory _$$EncryptionResultImplCopyWith(_$EncryptionResultImpl value,
+          $Res Function(_$EncryptionResultImpl) then) =
+      __$$EncryptionResultImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({String nonce, String ciphertext, String? tag});
+  $Res call({String nonce, String ciphertext, String mac});
 }
 
 /// @nodoc
-class __$$EncryptedDataImplCopyWithImpl<$Res>
-    extends _$EncryptedDataCopyWithImpl<$Res, _$EncryptedDataImpl>
-    implements _$$EncryptedDataImplCopyWith<$Res> {
-  __$$EncryptedDataImplCopyWithImpl(
-      _$EncryptedDataImpl _value, $Res Function(_$EncryptedDataImpl) _then)
+class __$$EncryptionResultImplCopyWithImpl<$Res>
+    extends _$EncryptionResultCopyWithImpl<$Res, _$EncryptionResultImpl>
+    implements _$$EncryptionResultImplCopyWith<$Res> {
+  __$$EncryptionResultImplCopyWithImpl(_$EncryptionResultImpl _value,
+      $Res Function(_$EncryptionResultImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of EncryptedData
+  /// Create a copy of EncryptionResult
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
     Object? nonce = null,
     Object? ciphertext = null,
-    Object? tag = freezed,
+    Object? mac = null,
   }) {
-    return _then(_$EncryptedDataImpl(
+    return _then(_$EncryptionResultImpl(
       nonce: null == nonce
           ? _value.nonce
           : nonce // ignore: cast_nullable_to_non_nullable
@@ -120,22 +120,22 @@ class __$$EncryptedDataImplCopyWithImpl<$Res>
           ? _value.ciphertext
           : ciphertext // ignore: cast_nullable_to_non_nullable
               as String,
-      tag: freezed == tag
-          ? _value.tag
-          : tag // ignore: cast_nullable_to_non_nullable
-              as String?,
+      mac: null == mac
+          ? _value.mac
+          : mac // ignore: cast_nullable_to_non_nullable
+              as String,
     ));
   }
 }
 
 /// @nodoc
 @JsonSerializable()
-class _$EncryptedDataImpl implements _EncryptedData {
-  _$EncryptedDataImpl(
-      {required this.nonce, required this.ciphertext, this.tag});
+class _$EncryptionResultImpl implements _EncryptionResult {
+  _$EncryptionResultImpl(
+      {required this.nonce, required this.ciphertext, required this.mac});
 
-  factory _$EncryptedDataImpl.fromJson(Map<String, dynamic> json) =>
-      _$$EncryptedDataImplFromJson(json);
+  factory _$EncryptionResultImpl.fromJson(Map<String, dynamic> json) =>
+      _$$EncryptionResultImplFromJson(json);
 
   @override
   final String nonce;
@@ -144,54 +144,55 @@ class _$EncryptedDataImpl implements _EncryptedData {
   @override
   final String ciphertext;
 
-  /// - [tag]: Optional authentication tag for the encrypted data
+  /// - [mac]: authentication mac for the encrypted data
   @override
-  final String? tag;
+  final String mac;
 
   @override
   String toString() {
-    return 'EncryptedData(nonce: $nonce, ciphertext: $ciphertext, tag: $tag)';
+    return 'EncryptionResult(nonce: $nonce, ciphertext: $ciphertext, mac: $mac)';
   }
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$EncryptedDataImpl &&
+            other is _$EncryptionResultImpl &&
             (identical(other.nonce, nonce) || other.nonce == nonce) &&
             (identical(other.ciphertext, ciphertext) ||
                 other.ciphertext == ciphertext) &&
-            (identical(other.tag, tag) || other.tag == tag));
+            (identical(other.mac, mac) || other.mac == mac));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, nonce, ciphertext, tag);
+  int get hashCode => Object.hash(runtimeType, nonce, ciphertext, mac);
 
-  /// Create a copy of EncryptedData
+  /// Create a copy of EncryptionResult
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   @pragma('vm:prefer-inline')
-  _$$EncryptedDataImplCopyWith<_$EncryptedDataImpl> get copyWith =>
-      __$$EncryptedDataImplCopyWithImpl<_$EncryptedDataImpl>(this, _$identity);
+  _$$EncryptionResultImplCopyWith<_$EncryptionResultImpl> get copyWith =>
+      __$$EncryptionResultImplCopyWithImpl<_$EncryptionResultImpl>(
+          this, _$identity);
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$EncryptedDataImplToJson(
+    return _$$EncryptionResultImplToJson(
       this,
     );
   }
 }
 
-abstract class _EncryptedData implements EncryptedData {
-  factory _EncryptedData(
+abstract class _EncryptionResult implements EncryptionResult {
+  factory _EncryptionResult(
       {required final String nonce,
       required final String ciphertext,
-      final String? tag}) = _$EncryptedDataImpl;
+      required final String mac}) = _$EncryptionResultImpl;
 
-  factory _EncryptedData.fromJson(Map<String, dynamic> json) =
-      _$EncryptedDataImpl.fromJson;
+  factory _EncryptionResult.fromJson(Map<String, dynamic> json) =
+      _$EncryptionResultImpl.fromJson;
 
   @override
   String get nonce;
@@ -200,14 +201,14 @@ abstract class _EncryptedData implements EncryptedData {
   @override
   String get ciphertext;
 
-  /// - [tag]: Optional authentication tag for the encrypted data
+  /// - [mac]: authentication mac for the encrypted data
   @override
-  String? get tag;
+  String get mac;
 
-  /// Create a copy of EncryptedData
+  /// Create a copy of EncryptionResult
   /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$EncryptedDataImplCopyWith<_$EncryptedDataImpl> get copyWith =>
+  _$$EncryptionResultImplCopyWith<_$EncryptionResultImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

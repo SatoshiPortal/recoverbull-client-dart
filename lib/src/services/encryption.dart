@@ -2,20 +2,9 @@ import 'dart:typed_data';
 
 import 'package:hex/hex.dart';
 import 'package:recoverbull/recoverbull.dart';
-import 'package:recoverbull/src/models/encrypted_data.dart';
+import 'package:recoverbull/src/models/encryption_result.dart';
 import 'package:pointycastle/export.dart';
-
-/// Custom exception for encryption operations
-class EncryptionException implements Exception {
-  final String message;
-  final dynamic cause;
-
-  EncryptionException(this.message, [this.cause]);
-
-  @override
-  String toString() =>
-      'EncryptionException: $message${cause != null ? ' ($cause)' : ''}';
-}
+import 'package:recoverbull/src/models/exceptions.dart';
 
 /// Service handling encryption and decryption operations
 class EncryptionService {
@@ -59,9 +48,9 @@ class EncryptionService {
   }
 
   /// Encrypts data using AES-CBC with PKCS7 padding
-  static Future<EncryptedData> aesEncrypt(
-    Uint8List keyBytes,
-    Uint8List plaintext,
+  static Future<EncryptionResult> encrypt(
+    List<int> keyBytes,
+    List<int> plaintext,
   ) async {
     // try {
     // Validate inputs
@@ -72,7 +61,7 @@ class EncryptionService {
     final iv = Uint8List.fromList(generateRandomBytes(length: _ivLength));
 
     final params = PaddedBlockCipherParameters(
-      ParametersWithIV(KeyParameter(keyBytes), iv),
+      ParametersWithIV(KeyParameter(Uint8List.fromList(keyBytes)), iv),
       null,
     );
     final paddedBlockCipher = PaddedBlockCipher('AES/CBC/PKCS7')
@@ -83,24 +72,24 @@ class EncryptionService {
 
     // Generate MAC
     final hmac = HMac(SHA256Digest(), 64);
-    hmac.init(KeyParameter(keyBytes));
+    hmac.init(KeyParameter(Uint8List.fromList(keyBytes)));
     hmac.update(iv, 0, iv.length);
     hmac.update(ciphertext, 0, ciphertext.length);
     final mac = Uint8List(_macLength);
     hmac.doFinal(mac, 0);
-    return EncryptedData(
+    return EncryptionResult(
       ciphertext: HEX.encode(ciphertext),
       nonce: HEX.encode(iv),
-      tag: HEX.encode(mac),
+      mac: HEX.encode(mac),
     );
   }
 
   /// Decrypts data using AES-CBC with PKCS7 padding
   static Future<List<int>> decrypt({
-    required Uint8List keyBytes,
-    required Uint8List ciphertext,
-    required Uint8List iv,
-    Uint8List? mac,
+    required List<int> keyBytes,
+    required List<int> ciphertext,
+    required List<int> iv,
+    List<int>? mac,
   }) async {
     // Excerpt from: class EncryptionService
     _validateData(ciphertext);
@@ -114,9 +103,9 @@ class EncryptionService {
       // Verify MAC if present
       if (mac != null) {
         final hmac = HMac(SHA256Digest(), 64);
-        hmac.init(KeyParameter(keyBytes));
-        hmac.update(iv, 0, iv.length);
-        hmac.update(ciphertext, 0, ciphertext.length);
+        hmac.init(KeyParameter(Uint8List.fromList(keyBytes)));
+        hmac.update(Uint8List.fromList(iv), 0, iv.length);
+        hmac.update(Uint8List.fromList(ciphertext), 0, ciphertext.length);
 
         final calculatedMac = Uint8List(_macLength);
         hmac.doFinal(calculatedMac, 0);
@@ -127,7 +116,10 @@ class EncryptionService {
         }
       }
       final params = PaddedBlockCipherParameters(
-        ParametersWithIV(KeyParameter(keyBytes), iv),
+        ParametersWithIV(
+          KeyParameter(Uint8List.fromList(keyBytes)),
+          Uint8List.fromList(iv),
+        ),
         null,
       );
       final paddedBlockCipher = PaddedBlockCipher('AES/CBC/PKCS7')
@@ -148,8 +140,4 @@ class EncryptionService {
       _secureClose(keyBytes);
     }
   }
-}
-
-List<int> sha256(List<int> input) {
-  return SHA256Digest().process(Uint8List.fromList(input));
 }
