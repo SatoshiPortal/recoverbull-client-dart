@@ -1,8 +1,9 @@
-import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
+
 import 'package:hex/hex.dart';
+import 'package:recoverbull/recoverbull.dart';
 import 'package:recoverbull/src/models/encrypted_data.dart';
 import 'package:pointycastle/export.dart';
-import 'package:recoverbull/src/utils.dart';
 
 /// Custom exception for encryption operations
 class EncryptionException implements Exception {
@@ -68,7 +69,7 @@ class EncryptionService {
     _validateData(plaintext);
 
     // Generate random IV
-    final iv = generateRandomBytes(length: _ivLength);
+    final iv = Uint8List.fromList(generateRandomBytes(length: _ivLength));
 
     final params = PaddedBlockCipherParameters(
       ParametersWithIV(KeyParameter(keyBytes), iv),
@@ -121,7 +122,7 @@ class EncryptionService {
         hmac.doFinal(calculatedMac, 0);
 
         // Constant-time comparison
-        if (!_constantTimeEquals(mac, calculatedMac)) {
+        if (!constantTimeComparison(mac, calculatedMac)) {
           throw EncryptionException('MAC verification failed', null);
         }
       }
@@ -146,16 +147,6 @@ class EncryptionService {
     } finally {
       _secureClose(keyBytes);
     }
-  }
-
-  // Constant-time comparison to prevent timing attacks
-  static bool _constantTimeEquals(List<int> a, List<int> b) {
-    if (a.length != b.length) return false;
-    var result = 0;
-    for (var i = 0; i < a.length; i++) {
-      result |= a[i] ^ b[i];
-    }
-    return result == 0;
   }
 }
 

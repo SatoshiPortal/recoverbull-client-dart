@@ -1,6 +1,7 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
-import 'package:flutter/rendering.dart';
-import 'package:recoverbull/src/utils.dart';
+import 'package:recoverbull/recoverbull.dart';
 
 /// Custom exception for key management operations
 class KeyManagementException implements Exception {
@@ -40,14 +41,14 @@ class KeyManagementService {
         data: {
           'backup_id': backupId,
           'backup_key': backupKey,
-          'secret_hash': secret.toSHA256Hash(),
+          'secret_hash': sha256Hex(utf8.encode(secret)),
         },
       );
 
       _handleStoreResponse(response);
-      debugPrint('Backup key stored successfully on server');
+      print('Backup key stored successfully on server');
     } catch (e, stackTrace) {
-      debugPrint(stackTrace.toString());
+      print(stackTrace.toString());
       if (e is KeyManagementException) rethrow;
       throw KeyManagementException(
         'Failed to store backup key on server: ${e.toString()}',
@@ -68,13 +69,13 @@ class KeyManagementService {
         options: Options(headers: _contentTypeJson),
         data: {
           'backup_id': backupId,
-          'secret_hash': secret.toSHA256Hash(),
+          'secret_hash': sha256Hex(utf8.encode(secret)),
         },
       );
 
       return _extractBackupKey(response);
     } catch (e, stackTrace) {
-      debugPrint(stackTrace.toString());
+      print(stackTrace.toString());
       if (e is KeyManagementException) rethrow;
       throw KeyManagementException(
         'Failed to recover backup key from server: ${e.toString()}',
@@ -101,7 +102,7 @@ class KeyManagementService {
         'Failed to store key on server (${response.statusCode})',
       );
     } catch (e, stackTrace) {
-      debugPrint(stackTrace.toString());
+      print(stackTrace.toString());
       if (e is KeyManagementException) rethrow;
       throw KeyManagementException(
         'Failed to handle store response: ${e.toString()}',
@@ -126,7 +127,7 @@ class KeyManagementService {
         'Invalid backup key format received from server',
       );
     } catch (e, stackTrace) {
-      debugPrint(stackTrace.toString());
+      print(stackTrace.toString());
       if (e is KeyManagementException) rethrow;
       throw KeyManagementException(
         'Failed to extract backup key: ${e.toString()}',

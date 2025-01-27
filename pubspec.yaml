@@ -8,8 +8,6 @@ environment:
   flutter: ">=1.17.0"
 
 dependencies:
-  flutter:
-    sdk: flutter
   dio: ^5.7.0
   hex: ^0.2.0
   bip32: ^2.0.0
@@ -21,8 +19,6 @@ dependencies:
   json_annotation: ^4.9.0
 
 dev_dependencies:
-  flutter_test:
-    sdk: flutter
   flutter_lints: ^5.0.0
   build_runner: ^2.4.9
   json_serializable: ^6.9.2

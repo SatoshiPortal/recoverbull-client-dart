@@ -1,7 +1,6 @@
 // backup_service.dart
 import 'dart:convert';
-import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
+import 'dart:typed_data';
 import 'package:hex/hex.dart';
 import 'package:recoverbull/src/models/backup_data.dart';
 import 'package:recoverbull/src/services/encryption.dart';
@@ -59,7 +58,7 @@ class BackupService {
 
       // Generate backup ID and encrypt data
       final backupId = HEX.encode(generateRandomBytes(length: 32));
-      debugPrint('Creating backup: $backupId');
+      print('Creating backup: $backupId');
 
       final encResult = await EncryptionService.aesEncrypt(
         keyBytes,
@@ -74,11 +73,11 @@ class BackupService {
       );
 
       final metadataJson = jsonEncode(metadata.toJson());
-      debugPrint('Successfully created backup: ${metadata.backupId}');
+      print('Successfully created backup: ${metadata.backupId}');
 
       return metadataJson;
     } catch (e, stackTrace) {
-      debugPrint(stackTrace.toString());
+      print(stackTrace.toString());
       if (e is BackupException) rethrow;
       throw BackupException('Failed to create backup: ${e.toString()}');
     }
@@ -124,7 +123,7 @@ class BackupService {
 
       // Generate backup ID
       final backupId = HEX.encode(generateRandomBytes(length: 32));
-      debugPrint('Creating backup: $backupId');
+      print('Creating backup: $backupId');
 
       // Derive backup key and encrypt data
       final Uint8List backupKey = Uint8List.fromList(deriveBip85(
@@ -140,12 +139,12 @@ class BackupService {
           createdAt: DateTime.now().millisecondsSinceEpoch,
           encryptedData: encResult);
       final metadataJson = jsonEncode(metadata.toJson());
-      debugPrint(
+      print(
           'Successfully created backup: ${jsonDecode(metadataJson)["backupId"]}');
 
       return (HEX.encode(backupKey), metadataJson);
     } catch (e, stackTrace) {
-      debugPrint(stackTrace.toString());
+      print(stackTrace.toString());
       if (e is BackupException) rethrow;
       throw BackupException('Failed to create backup: ${e.toString()}');
     }
@@ -173,10 +172,9 @@ class BackupService {
     String key,
   ) async {
     try {
-      // Parse and validate metadata
-      final BackupMetadata backupMetadata = metadata.parseMetadata();
+      final backupMetadata = parseMetadata(metadata);
 
-      debugPrint('Restoring backup: ${backupMetadata.backupId}');
+      print('Restoring backup: ${backupMetadata.backupId}');
 
       // Validate and decode key
       Uint8List keyBytes;
@@ -218,14 +216,14 @@ class BackupService {
       // Convert to string
       try {
         final plaintext = utf8.decode(plaintextBytes);
-        debugPrint('Successfully restored backup: ${backupMetadata.backupId}');
+        print('Successfully restored backup: ${backupMetadata.backupId}');
         return plaintext;
       } catch (e) {
         throw BackupException(
             'Decrypted data is not valid UTF-8: ${e.toString()}');
       }
     } catch (e, stackTrace) {
-      debugPrint(stackTrace.toString());
+      print(stackTrace.toString());
       if (e is BackupException) rethrow;
       throw BackupException('Failed to restore backup: ${e.toString()}');
     }
@@ -261,9 +259,9 @@ class BackupService {
   }) async {
     try {
       // Parse and validate metadata
-      final BackupMetadata backupMetadata = metadata.parseMetadata();
+      final backupMetadata = parseMetadata(metadata);
 
-      debugPrint('Restoring backup: ${backupMetadata.backupId}');
+      print('Restoring backup: ${backupMetadata.backupId}');
 
       // Validate mnemonic and derive key
       final extendedPrivateKey = await ExtendedPrivateKey.fromString(
@@ -311,14 +309,14 @@ class BackupService {
       // Convert to string
       try {
         final plaintext = utf8.decode(plaintextBytes);
-        debugPrint('Successfully restored backup: ${backupMetadata.backupId}');
+        print('Successfully restored backup: ${backupMetadata.backupId}');
         return plaintext;
       } catch (e) {
         throw BackupException(
             'Decrypted data is not valid UTF-8: ${e.toString()}');
       }
     } catch (e, stackTrace) {
-      debugPrint(stackTrace.toString());
+      print(stackTrace.toString());
       if (e is BackupException) rethrow;
       throw BackupException(
         'Failed to restore backup using path $derivationPath: ${e.toString()}',
