@@ -99,21 +99,25 @@ extension StringToBip39Language on String {
   }
 }
 
-extension BackupMetadataParser on String {
-  BackupMetadata parseMetadata() {
-    try {
-      return BackupMetadata.fromJson(jsonDecode(this));
-    } catch (e) {
-      throw BackupException('Invalid backup metadata format: ${e.toString()}');
-    }
+BackupMetadata parseMetadata(String metadata) {
+  try {
+    return BackupMetadata.fromJson(jsonDecode(metadata));
+  } catch (e) {
+    throw BackupException('Invalid backup metadata format: ${e.toString()}');
   }
 }
 
-/// Extension for secret hashing operations
-extension SecretHasher on String {
-  String toSHA256Hash() {
-    final bytes = utf8.encode(this);
-    final digest = SHA256Digest().process(Uint8List.fromList(bytes));
-    return HEX.encode(digest);
+String sha256Hex(List<int> bytes) {
+  final digest = SHA256Digest().process(Uint8List.fromList(bytes));
+  return HEX.encode(digest);
+}
+
+// Constant-time comparison to prevent timing attacks
+bool constantTimeComparison(List<int> a, List<int> b) {
+  if (a.length != b.length) return false;
+  var result = 0;
+  for (var i = 0; i < a.length; i++) {
+    result |= a[i] ^ b[i];
   }
+  return result == 0;
 }
