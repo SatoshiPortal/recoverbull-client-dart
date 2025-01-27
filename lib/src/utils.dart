@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:bip32/bip32.dart' as bip32;
@@ -6,7 +5,7 @@ import 'package:bip39_mnemonic/bip39_mnemonic.dart' as bip39;
 import 'package:bip85/bip85.dart';
 import 'package:hex/hex.dart';
 import 'package:pointycastle/digests/sha256.dart';
-import 'package:recoverbull/recoverbull.dart';
+import 'package:recoverbull/src/models/exceptions.dart';
 
 Uint8List generateRandomBytes({int length = 32}) {
   final secureRandom = Random.secure();
@@ -99,14 +98,6 @@ extension StringToBip39Language on String {
   }
 }
 
-BackupMetadata parseMetadata(String metadata) {
-  try {
-    return BackupMetadata.fromJson(jsonDecode(metadata));
-  } catch (e) {
-    throw BackupException('Invalid backup metadata format: ${e.toString()}');
-  }
-}
-
 String sha256Hex(List<int> bytes) {
   final digest = SHA256Digest().process(Uint8List.fromList(bytes));
   return HEX.encode(digest);
@@ -120,4 +111,32 @@ bool constantTimeComparison(List<int> a, List<int> b) {
     result |= a[i] ^ b[i];
   }
   return result == 0;
+}
+
+Future<String> getRootXprv({
+  required String mnemonic,
+  required bip32.NetworkType networkType,
+  String password = '',
+  required bip39.Language language,
+}) async {
+  try {
+    final invalidWords =
+        mnemonic.split(' ').where((word) => !language.isValid(word)).toList();
+
+    if (invalidWords.isNotEmpty) {
+      throw BackupException(
+        'Invalid words found for ${language.name} language: '
+        '${invalidWords.join(", ")}',
+      );
+    }
+    final bip39Mnemonic =
+        bip39.Mnemonic.fromSentence(mnemonic, language, passphrase: password);
+
+    final master = bip32.BIP32
+        .fromSeed(Uint8List.fromList(bip39Mnemonic.seed), networkType);
+
+    return master.toBase58();
+  } catch (e) {
+    throw BackupException('Failed to create extended private key: $e');
+  }
 }
