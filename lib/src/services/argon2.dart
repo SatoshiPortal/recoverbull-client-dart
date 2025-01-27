@@ -66,4 +66,21 @@ class Argon2 {
 
     return constantTimeComparison(Uint8List.fromList(hash), newHash);
   }
+
+  static (List<int>, List<int>) computeTwoKeysFromPassword({
+    required String password,
+    required List<int> salt,
+    required int length,
+  }) {
+    final keyDerivation = Argon2.hash(
+      password: password,
+      salt: salt,
+      length: length * 2,
+    );
+
+    final key1 = keyDerivation.sublist(0, length);
+    final key2 = keyDerivation.sublist(length);
+
+    return (key1, key2);
+  }
 }
