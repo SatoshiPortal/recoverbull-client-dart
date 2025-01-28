@@ -26,16 +26,17 @@ class BackupService {
         throw BackupException('32 bytes expected for the backup key');
       }
 
-      final encryptionResult =
-          await EncryptionService.encrypt(backupKey, plainTextBytes);
+      final encryption = EncryptionService.encrypt(
+        key: backupKey,
+        plaintext: plainTextBytes,
+      );
 
       // Create and encode backup
       final backup = Backup(
         backupId: HEX.encode(generateRandomBytes(length: 32)),
         createdAt: DateTime.now().millisecondsSinceEpoch,
-        nonce: encryptionResult.nonce,
-        ciphertext: encryptionResult.ciphertext,
-        mac: encryptionResult.mac,
+        nonce: HEX.encode(encryption.nonce),
+        ciphertext: HEX.encode(encryption.ciphertext),
         // may be used with Argon2
         salt: HEX.encode(generateRandomBytes(length: 16)),
       );
@@ -104,20 +105,18 @@ class BackupService {
     try {
       final backupMetadata = Backup.fromString(backup);
 
-      List<int> ciphertext, nonce, mac;
+      List<int> ciphertext, nonce;
       try {
         ciphertext = HEX.decode(backupMetadata.ciphertext);
         nonce = HEX.decode(backupMetadata.nonce);
-        mac = HEX.decode(backupMetadata.mac);
       } catch (e) {
         throw BackupException('Invalid encrypted data format: ${e.toString()}');
       }
 
-      final plaintextBytes = await EncryptionService.decrypt(
+      final plaintextBytes = EncryptionService.decrypt(
         ciphertext: ciphertext,
         nonce: nonce,
-        mac: mac,
-        keyBytes: backupKey,
+        key: backupKey,
       );
 
       try {

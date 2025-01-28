@@ -44,8 +44,10 @@ class KeyService {
       final encryptionKey = derivatedKeys.$2;
 
       // Encrypt the backupKey using the encryption key
-      final backupKeyEncrypted =
-          await EncryptionService.encrypt(encryptionKey, backupKey);
+      final backupKeyEncrypted = EncryptionService.encrypt(
+        key: encryptionKey,
+        plaintext: backupKey,
+      );
 
       final response = await _client.post(
         '$keyServer/store',
@@ -117,8 +119,8 @@ class KeyService {
       }
 
       final encryptedBackupKey = response.data['encrypted_secret'];
-      final backupKey = await EncryptionService.decrypt(
-        keyBytes: encryptionKey,
+      final backupKey = EncryptionService.decrypt(
+        key: encryptionKey,
         ciphertext: encryptedBackupKey,
         nonce: nonce,
       );
