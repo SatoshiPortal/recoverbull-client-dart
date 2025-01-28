@@ -1,136 +1,136 @@
-import 'dart:convert';
-
 import 'package:dio/dio.dart';
-import 'package:recoverbull/recoverbull.dart';
+import 'package:hex/hex.dart';
+import 'package:recoverbull/src/models/exceptions.dart';
+import 'package:recoverbull/src/services/argon2.dart';
+import 'package:recoverbull/src/services/encryption.dart';
 
-/// Custom exception for key management operations
-class KeyManagementException implements Exception {
-  final String message;
-  final dynamic cause;
-
-  const KeyManagementException(this.message, [this.cause]);
-
-  @override
-  String toString() =>
-      'KeyManagementException: $message${cause != null ? ' ($cause)' : ''}';
-}
-
-/// Service responsible for key management operations with remote server
-class KeyManagementService {
-  final String keychainapi;
+/// The [KeyService] class provides functionalities to store and recover
+/// backup keys securely by interacting with a remote key server API. It handles
+/// key derivation, encryption, and communication with the server.
+class KeyService {
+  final Uri keyServer;
   final Dio _client;
   static const _contentTypeJson = {'Content-Type': 'application/json'};
 
-  KeyManagementService({
-    required this.keychainapi,
-    Dio? client,
-  }) : _client = client ?? Dio();
+  /// Creates an instance of [KeyService].
+  KeyService({required this.keyServer, Dio? client})
+      : _client = client ?? Dio();
 
-  /// Stores a backup key on the remote server
-  Future<void> storeBackupKey(
-    String backupId,
-    String backupKey,
-    String secret,
-  ) async {
+  /// Stores an encrypted backup key on the remote key-server.
+  ///
+  /// Parameters:
+  /// - `backupId`: Hex-encoded
+  /// - `password`: The password used for key derivation.
+  /// - `backupKey`: The bytes of the backup key
+  /// - `salt`: The bytes of the salt used in key derivation.
+  Future<void> storeBackupKey({
+    required String backupId,
+    required String password,
+    required List<int> backupKey,
+    required List<int> salt,
+  }) async {
     try {
-      _validateApiUrl();
+      final derivatedKeys = Argon2.computeTwoKeysFromPassword(
+        password: password,
+        salt: salt,
+        length: 32,
+      );
+      if (derivatedKeys.$1.length != 32 || derivatedKeys.$2.length != 32) {
+        throw KeyServiceException('Each key should have the same length');
+      }
+      // authentication key will be consumed by the key server
+      final authenticationKey = derivatedKeys.$1;
+      // encryption key will cipher the secret before storage on the key server.
+      final encryptionKey = derivatedKeys.$2;
+
+      // Encrypt the backupKey using the encryption key
+      final backupKeyEncrypted =
+          await EncryptionService.encrypt(encryptionKey, backupKey);
 
       final response = await _client.post(
-        '$keychainapi/store_key',
+        '$keyServer/store',
         options: Options(headers: _contentTypeJson),
         data: {
           'backup_id': backupId,
-          'backup_key': backupKey,
-          'secret_hash': sha256Hex(utf8.encode(secret)),
+          'authentication_key': HEX.encode(authenticationKey),
+          'encrypted_secret': backupKeyEncrypted,
         },
       );
 
-      _handleStoreResponse(response);
-      print('Backup key stored successfully on server');
-    } catch (e, stackTrace) {
-      print(stackTrace.toString());
-      if (e is KeyManagementException) rethrow;
-      throw KeyManagementException(
+      if (response.statusCode == 201) return;
+
+      if (response.statusCode == 403) {
+        throw const KeyServiceException('Key already stored on server');
+      }
+
+      throw KeyServiceException(
+        'Failed to store key on server (${response.statusCode})',
+      );
+    } catch (e) {
+      if (e is KeyServiceException) rethrow;
+      throw KeyServiceException(
         'Failed to store backup key on server: ${e.toString()}',
       );
     }
   }
 
-  /// Recovers a backup key from the remote server
-  Future<String> recoverBackupKey(
-    String backupId,
-    String secret,
-  ) async {
+  /// Recovers an encrypted backup key from the key server.
+  ///
+  /// Parameters:
+  /// - `backupId`: Hex-encoded
+  /// - `password`: The password used for key derivation.
+  /// - `backupKey`: The bytes of the backup key
+  /// - `salt`: The bytes of the salt used in key derivation.
+  Future<List<int>> recoverBackupKey({
+    required String backupId,
+    required String password,
+    required List<int> nonce,
+    required List<int> salt,
+  }) async {
     try {
-      _validateApiUrl();
+      final derivatedKeys = Argon2.computeTwoKeysFromPassword(
+        password: password,
+        salt: salt,
+        length: 32,
+      );
+      if (derivatedKeys.$1.length != 32 || derivatedKeys.$2.length != 32) {
+        throw KeyServiceException('Each key should have the same length');
+      }
+      // authentication key will be consumed by the key server
+      final authenticationKey = derivatedKeys.$1;
+      // encryption key will cipher the secret before storage on the key server.
+      final encryptionKey = derivatedKeys.$2;
 
       final response = await _client.post(
-        '$keychainapi/recover_key',
+        '$keyServer/recover',
         options: Options(headers: _contentTypeJson),
         data: {
           'backup_id': backupId,
-          'secret_hash': sha256Hex(utf8.encode(secret)),
+          'authentication_key': HEX.encode(authenticationKey),
         },
       );
 
-      return _extractBackupKey(response);
-    } catch (e, stackTrace) {
-      print(stackTrace.toString());
-      if (e is KeyManagementException) rethrow;
-      throw KeyManagementException(
-        'Failed to recover backup key from server: ${e.toString()}',
-      );
-    }
-  }
-
-  // Private helper methods
-  void _validateApiUrl() {
-    if (keychainapi.isEmpty) {
-      throw const KeyManagementException('Keychain API URL not set');
-    }
-  }
-
-  void _handleStoreResponse(Response response) {
-    try {
-      if (response.statusCode == 201) return;
-
-      if (response.statusCode == 403) {
-        throw const KeyManagementException('Key already stored on server');
-      }
-
-      throw KeyManagementException(
-        'Failed to store key on server (${response.statusCode})',
-      );
-    } catch (e, stackTrace) {
-      print(stackTrace.toString());
-      if (e is KeyManagementException) rethrow;
-      throw KeyManagementException(
-        'Failed to handle store response: ${e.toString()}',
-      );
-    }
-  }
-
-  String _extractBackupKey(Response response) {
-    try {
       if (response.statusCode != 200) {
-        throw KeyManagementException(
+        throw KeyServiceException(
           'Failed to recover key (${response.statusCode}): ${response.data}',
         );
       }
 
-      final backupKey = response.data['backup_key'];
-      if (backupKey != null && backupKey is String) {
-        return backupKey;
-      }
+      final encryptedBackupKey = response.data['encrypted_secret'];
+      final backupKey = await EncryptionService.decrypt(
+        keyBytes: encryptionKey,
+        ciphertext: encryptedBackupKey,
+        nonce: nonce,
+      );
+      if (backupKey.isNotEmpty && backupKey.length == 32) return backupKey;
 
-      throw const KeyManagementException(
+      throw const KeyServiceException(
         'Invalid backup key format received from server',
       );
-    } catch (e, stackTrace) {
-      print(stackTrace.toString());
-      if (e is KeyManagementException) rethrow;
-      throw KeyManagementException(
-        'Failed to extract backup key: ${e.toString()}',
+    } catch (e) {
+      if (e is KeyServiceException) rethrow;
+      throw KeyServiceException(
+        'Failed to recover backup key from server: ${e.toString()}',
       );
     }
   }
