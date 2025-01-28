@@ -6,19 +6,18 @@ import 'package:recoverbull/src/services/encryption.dart';
 
 /// BackupService helps you to create and restore bull backups
 class BackupService {
-  /// Creates an encrypted backup of your [plaintext] content
+  /// Creates an encrypted backup of your [secret] content
   /// using a provided [backupKey] for the encryption
   ///
   /// Parameters:
-  /// - `plaintext` - The data to be encrypted and backed up
+  /// - `secret` - The bytes of your plaintext to encrypt
   /// - `backupKey` - The encryption key
-  static Future<String> createBackup({
-    required String plaintext,
+  static String createBackup({
+    required List<int> secret,
     required List<int> backupKey,
-  }) async {
+  }) {
     try {
-      final plainTextBytes = utf8.encode(plaintext);
-      if (plainTextBytes.isEmpty) {
+      if (secret.isEmpty) {
         throw BackupException('Backup data cannot be empty');
       }
 
@@ -28,7 +27,7 @@ class BackupService {
 
       final encryption = EncryptionService.encrypt(
         key: backupKey,
-        plaintext: plainTextBytes,
+        plaintext: secret,
       );
 
       // Create and encode backup
@@ -53,25 +52,24 @@ class BackupService {
   /// BIP85 derivation path to generate the backup key
   ///
   /// Parameters:
-  /// - `plaintext` - The data to be encrypted and backed up
+  /// - `secret` - The data to be encrypted and backed up
   /// - `mnemonic` - The BIP39 mnemonic phrase used for key derivation
   /// - `derivationPath` - The BIP85 derivation path
   /// - `language` - The BIP39 language of the mnemonic
   /// - `network` - Optional network type ("mainnet" or "testnet", defaults to "mainnet")
-  static Future<String> createBackupWithBIP85({
-    required String plaintext,
+  static String createBackupWithBIP85({
+    required List<int> secret,
     required String mnemonic,
     required String derivationPath,
     String language = 'english',
     String? network,
-  }) async {
+  }) {
     try {
-      final plainTextBytes = utf8.encode(plaintext);
-      if (plainTextBytes.isEmpty) {
+      if (secret.isEmpty) {
         throw BackupException('Backup data cannot be empty');
       }
 
-      final extendedPrivateKey = await getRootXprv(
+      final extendedPrivateKey = getRootXprv(
         language: language.bip39Language,
         mnemonic: mnemonic,
         networkType: network.networkType,
@@ -82,8 +80,8 @@ class BackupService {
         path: derivationPath,
       );
 
-      final backup = await BackupService.createBackup(
-        plaintext: plaintext,
+      final backup = BackupService.createBackup(
+        secret: secret,
         backupKey: backupKey,
       );
 
@@ -99,10 +97,10 @@ class BackupService {
   /// Parameters:
   /// - `backup` JSON string encoding the encrypted backup
   /// - `backupkey` encryption key to decrypt the backup
-  static Future<String> restoreBackup(
-    String backup,
-    List<int> backupKey,
-  ) async {
+  static String restoreBackup({
+    required String backup,
+    required List<int> backupKey,
+  }) {
     try {
       final backupMetadata = Backup.fromString(backup);
 
@@ -142,15 +140,15 @@ class BackupService {
   /// - `derivationPath` - BIP85 derivation path
   /// - `network` - Optional network type ("mainnet" or "testnet", defaults to "mainnet")
   /// - `language` - BIP39 language of the mnemonic
-  static Future<String> restoreBackupFromBip85({
+  static String restoreBackupFromBip85({
     required String backup,
     required String mnemonic,
     required String derivationPath,
     String? network,
     String language = 'english',
-  }) async {
+  }) {
     try {
-      final extendedPrivateKey = await getRootXprv(
+      final extendedPrivateKey = getRootXprv(
         mnemonic: mnemonic,
         language: language.bip39Language,
         networkType: network.networkType,
@@ -161,7 +159,7 @@ class BackupService {
         path: derivationPath,
       );
 
-      final plaintext = restoreBackup(backup, backupKey);
+      final plaintext = restoreBackup(backup: backup, backupKey: backupKey);
       return plaintext;
     } catch (e) {
       if (e is BackupException) rethrow;
