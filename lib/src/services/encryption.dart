@@ -25,7 +25,7 @@ class EncryptionService {
       isEncrypt: true,
     );
 
-    final mac = _mac(ciphertext: ciphertext, key: key, nonce: nonce);
+    final mac = computeMac(ciphertext: ciphertext, key: key, nonce: nonce);
 
     return (ciphertext: ciphertext, nonce: nonce, mac: mac);
   }
@@ -37,7 +37,8 @@ class EncryptionService {
     required List<int> nonce,
     List<int>? mac,
   }) {
-    final computedMac = _mac(nonce: nonce, key: key, ciphertext: ciphertext);
+    final computedMac =
+        computeMac(nonce: nonce, key: key, ciphertext: ciphertext);
 
     if (mac != null && constantTimeComparison(computedMac, mac) == false) {
       throw EncryptionException('Invalid MAC');
@@ -79,7 +80,7 @@ class EncryptionService {
     }
   }
 
-  static List<int> _mac({
+  static List<int> computeMac({
     required List<int> nonce,
     required List<int> key,
     required List<int> ciphertext,
