@@ -113,12 +113,12 @@ bool constantTimeComparison(List<int> a, List<int> b) {
   return result == 0;
 }
 
-Future<String> getRootXprv({
+String getRootXprv({
   required String mnemonic,
   required bip32.NetworkType networkType,
   String password = '',
   required bip39.Language language,
-}) async {
+}) {
   try {
     final invalidWords =
         mnemonic.split(' ').where((word) => !language.isValid(word)).toList();
