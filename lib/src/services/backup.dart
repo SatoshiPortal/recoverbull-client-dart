@@ -37,6 +37,7 @@ class BackupService {
         createdAt: DateTime.now().millisecondsSinceEpoch,
         nonce: HEX.encode(encryption.nonce),
         ciphertext: HEX.encode(encryption.ciphertext),
+        mac: HEX.encode(encryption.mac),
         // may be used with Argon2
         salt: HEX.encode(generateRandomBytes(length: 16)),
       );
@@ -105,10 +106,11 @@ class BackupService {
     try {
       final backupMetadata = Backup.fromString(backup);
 
-      List<int> ciphertext, nonce;
+      List<int> ciphertext, nonce, mac;
       try {
         ciphertext = HEX.decode(backupMetadata.ciphertext);
         nonce = HEX.decode(backupMetadata.nonce);
+        mac = HEX.decode(backupMetadata.mac);
       } catch (e) {
         throw BackupException('Invalid encrypted data format: ${e.toString()}');
       }
@@ -117,6 +119,7 @@ class BackupService {
         ciphertext: ciphertext,
         nonce: nonce,
         key: backupKey,
+        mac: mac,
       );
 
       try {

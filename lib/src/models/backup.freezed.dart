@@ -23,19 +23,19 @@ mixin _$Backup {
   /// Unix timestamp (in seconds) when the backup was created
   int get createdAt => throw _privateConstructorUsedError;
 
-  /// Unique identifier for the backup
+  /// Hex encoded Unique identifier for the backup
   String get backupId => throw _privateConstructorUsedError;
 
   /// Hex encoded nonce used for backup file encryption
   String get nonce => throw _privateConstructorUsedError;
 
-  /// Encryption data used to secure the backup
+  /// Hex encoded ciphertext used to secure the backup
   String get ciphertext => throw _privateConstructorUsedError;
 
   /// Hex encoded salt may be used for password key derivation (Argon2)
   String get salt => throw _privateConstructorUsedError;
 
-  /// - [mac]: Optional authentication mac for the encrypted data
+  /// Hex encoded MAC authentication mac for the encrypted data
   String get mac => throw _privateConstructorUsedError;
 
   /// Serializes this Backup to a JSON map.
@@ -195,7 +195,7 @@ class _$BackupImpl implements _Backup {
   @override
   final int createdAt;
 
-  /// Unique identifier for the backup
+  /// Hex encoded Unique identifier for the backup
   @override
   final String backupId;
 
@@ -203,7 +203,7 @@ class _$BackupImpl implements _Backup {
   @override
   final String nonce;
 
-  /// Encryption data used to secure the backup
+  /// Hex encoded ciphertext used to secure the backup
   @override
   final String ciphertext;
 
@@ -211,7 +211,7 @@ class _$BackupImpl implements _Backup {
   @override
   final String salt;
 
-  /// - [mac]: Optional authentication mac for the encrypted data
+  /// Hex encoded MAC authentication mac for the encrypted data
   @override
   final String mac;
 
@@ -272,7 +272,7 @@ abstract class _Backup implements Backup {
   @override
   int get createdAt;
 
-  /// Unique identifier for the backup
+  /// Hex encoded Unique identifier for the backup
   @override
   String get backupId;
 
@@ -280,7 +280,7 @@ abstract class _Backup implements Backup {
   @override
   String get nonce;
 
-  /// Encryption data used to secure the backup
+  /// Hex encoded ciphertext used to secure the backup
   @override
   String get ciphertext;
 
@@ -288,7 +288,7 @@ abstract class _Backup implements Backup {
   @override
   String get salt;
 
-  /// - [mac]: Optional authentication mac for the encrypted data
+  /// Hex encoded MAC authentication mac for the encrypted data
   @override
   String get mac;
 

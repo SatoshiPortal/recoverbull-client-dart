@@ -16,19 +16,19 @@ class Backup with _$Backup {
     /// Unix timestamp (in seconds) when the backup was created
     required int createdAt,
 
-    /// Unique identifier for the backup
+    /// Hex encoded Unique identifier for the backup
     required String backupId,
 
     /// Hex encoded nonce used for backup file encryption
     required String nonce,
 
-    /// Encryption data used to secure the backup
+    /// Hex encoded ciphertext used to secure the backup
     required String ciphertext,
 
     /// Hex encoded salt may be used for password key derivation (Argon2)
     required String salt,
 
-    /// - [mac]: Optional authentication mac for the encrypted data
+    /// Hex encoded MAC authentication mac for the encrypted data
     required String mac,
   }) = _Backup;
 

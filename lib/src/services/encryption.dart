@@ -38,7 +38,8 @@ class EncryptionService {
     List<int>? mac,
   }) {
     final computedMac = _mac(nonce: nonce, key: key, ciphertext: ciphertext);
-    if (mac != null && mac != computedMac) {
+
+    if (mac != null && constantTimeComparison(computedMac, mac) == false) {
       throw EncryptionException('Invalid MAC');
     }
 

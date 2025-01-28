@@ -7,7 +7,7 @@ import 'package:hex/hex.dart';
 import 'package:pointycastle/digests/sha256.dart';
 import 'package:recoverbull/src/models/exceptions.dart';
 
-Uint8List generateRandomBytes({int length = 32}) {
+List<int> generateRandomBytes({int length = 32}) {
   final secureRandom = Random.secure();
   final bytes = Uint8List(length);
   for (int i = 0; i < length; i++) {
