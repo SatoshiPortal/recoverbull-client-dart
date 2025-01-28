@@ -8,8 +8,6 @@ import 'package:recoverbull/src/models/exceptions.dart';
 
 /// Service handling encryption and decryption operations
 class EncryptionService {
-  static const _minDataLength = 1;
-  static const _maxDataLength = 100 * 1024 * 1024; // 100MB limit
   static const _ivLength = 16;
   static const _macLength = 32;
 
@@ -19,8 +17,6 @@ class EncryptionService {
     List<int> plaintext,
   ) async {
     try {
-      _validateData(plaintext);
-
       final nonce = Uint8List.fromList(generateRandomBytes(length: _ivLength));
 
       final params = PaddedBlockCipherParameters(
@@ -61,7 +57,6 @@ class EncryptionService {
     required List<int> nonce,
     List<int>? mac,
   }) async {
-    _validateData(ciphertext);
     _validateIV(nonce);
     if (mac != null) _validateMAC(mac);
 
@@ -94,23 +89,12 @@ class EncryptionService {
       final decrypted =
           paddedBlockCipher.process(Uint8List.fromList(ciphertext));
 
-      _validateData(decrypted);
-
       return decrypted;
     } catch (e) {
       final error = 'AES/CBC/PKCS7 decryption failed';
       throw EncryptionException(error, e);
     } finally {
       _secureClose(keyBytes);
-    }
-  }
-
-  static void _validateData(List<int> data) {
-    if (data.length < _minDataLength || data.length > _maxDataLength) {
-      throw EncryptionException(
-        'Invalid data length',
-        'Must be between $_minDataLength and $_maxDataLength bytes',
-      );
     }
   }
 
