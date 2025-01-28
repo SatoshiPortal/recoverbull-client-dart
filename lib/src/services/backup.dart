@@ -1,109 +1,62 @@
-// backup_service.dart
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:hex/hex.dart';
-import 'package:recoverbull/src/models/backup_data.dart';
+import 'package:recoverbull/recoverbull.dart';
+import 'package:recoverbull/src/models/exceptions.dart';
 import 'package:recoverbull/src/services/encryption.dart';
-import 'package:bip39_mnemonic/bip39_mnemonic.dart' as bip39;
-import 'package:bip32/bip32.dart' as bip32;
-import 'package:recoverbull/src/utils.dart';
 
-/// Exception specific to backup operations
-class BackupException implements Exception {
-  final String message;
-  final dynamic cause;
-
-  BackupException(this.message, [this.cause]);
-
-  @override
-  String toString() =>
-      'BackupException: $message${cause != null ? ' ($cause)' : ''}';
-}
-
+/// BackupService helps you to create and restore bull backups
 class BackupService {
-  /// Creates an encrypted backup using a provided backup key
-  ///
-  /// Encrypts plaintext data using AES encryption with the provided key and
-  /// generates metadata for backup recovery.
+  /// Creates an encrypted backup of your [plaintext] content
+  /// using a provided [backupKey] for the encryption
   ///
   /// Parameters:
-  /// - [plaintext] - The data to be encrypted and backed up
-  /// - [backupKey] - The hex-encoded encryption key
-  ///
-  /// Returns the backup metadata as a JSON string containing:
-  /// - Backup ID
-  /// - Creation timestamp
-  /// - Encrypted data
-  ///
-  /// Throws [BackupException] if:
-  /// - The plaintext data is empty
-  /// - The backup key is invalid hex
-  /// - The encryption process fails
-  /// - The metadata creation or encoding fails
-  static Future<String> createBackup(String plaintext, String backupKey) async {
+  /// - `plaintext` - The data to be encrypted and backed up
+  /// - `backupKey` - The encryption key
+  static Future<String> createBackup({
+    required String plaintext,
+    required List<int> backupKey,
+  }) async {
     try {
-      // Validate inputs
       final plainTextBytes = utf8.encode(plaintext);
       if (plainTextBytes.isEmpty) {
         throw BackupException('Backup data cannot be empty');
       }
 
-      // Validate and decode backup key
-      Uint8List keyBytes;
-      try {
-        keyBytes = Uint8List.fromList(HEX.decode(backupKey));
-      } catch (e) {
-        throw BackupException('Invalid backup key format: must be valid hex');
+      if (backupKey.length < 32) {
+        throw BackupException('32 bytes expected for the backup key');
       }
 
-      // Generate backup ID and encrypt data
-      final backupId = HEX.encode(generateRandomBytes(length: 32));
-      print('Creating backup: $backupId');
+      final encryptionResult =
+          await EncryptionService.encrypt(backupKey, plainTextBytes);
 
-      final encResult = await EncryptionService.aesEncrypt(
-        keyBytes,
-        plainTextBytes,
-      );
-
-      // Create and encode metadata
-      final metadata = BackupMetadata(
-        backupId: backupId,
+      // Create and encode backup
+      final backup = Backup(
+        backupId: HEX.encode(generateRandomBytes(length: 32)),
         createdAt: DateTime.now().millisecondsSinceEpoch,
-        encryptedData: encResult,
+        nonce: encryptionResult.nonce,
+        ciphertext: encryptionResult.ciphertext,
+        mac: encryptionResult.mac,
+        // may be used with Argon2
+        salt: HEX.encode(generateRandomBytes(length: 16)),
       );
 
-      final metadataJson = jsonEncode(metadata.toJson());
-      print('Successfully created backup: ${metadata.backupId}');
-
-      return metadataJson;
-    } catch (e, stackTrace) {
-      print(stackTrace.toString());
+      return json.encode(backup.toJson());
+    } catch (e) {
       if (e is BackupException) rethrow;
       throw BackupException('Failed to create backup: ${e.toString()}');
     }
   }
 
-  /// Creates an encrypted backup using mnemonic phrase and BIP85 derivation path.
-  /// The backup includes encrypted data and metadata for recovery.
+  /// Creates an encrypted backup using mnemonic phrase and
+  /// BIP85 derivation path to generate the backup key
   ///
   /// Parameters:
-  /// - [plaintext] - The data to be encrypted and backed up
-  /// - [mnemonic] - The BIP39 mnemonic phrase used for key derivation
-  /// - [derivationPath] - The BIP85 derivation path (e.g., "m/83696968'/0'/0'")
-  /// - [language] - The BIP39 language of the mnemonic (defaults to 'english')
-  /// - [network] - Optional network type ("mainnet" or "testnet", defaults to "mainnet")
-  ///
-  /// Returns a tuple containing:
-  /// - The derived backup key as a hex string
-  /// - The backup metadata as a JSON string
-  ///
-  /// Throws [BackupException] if:
-  /// - The plaintext data is empty
-  /// - The mnemonic contains invalid words for the specified language
-  /// - Key derivation fails
-  /// - Encryption fails
-  /// - Metadata creation fails
-  static Future<(String, String)> createBackupWithBIP85({
+  /// - `plaintext` - The data to be encrypted and backed up
+  /// - `mnemonic` - The BIP39 mnemonic phrase used for key derivation
+  /// - `derivationPath` - The BIP85 derivation path
+  /// - `language` - The BIP39 language of the mnemonic
+  /// - `network` - Optional network type ("mainnet" or "testnet", defaults to "mainnet")
+  static Future<String> createBackupWithBIP85({
     required String plaintext,
     required String mnemonic,
     required String derivationPath,
@@ -116,248 +69,103 @@ class BackupService {
         throw BackupException('Backup data cannot be empty');
       }
 
-      final extendedPrivateKey = await ExtendedPrivateKey.fromString(
-          language: language.bip39Language,
-          mnemonic: mnemonic,
-          networkType: network.networkType);
+      final extendedPrivateKey = await getRootXprv(
+        language: language.bip39Language,
+        mnemonic: mnemonic,
+        networkType: network.networkType,
+      );
 
-      // Generate backup ID
-      final backupId = HEX.encode(generateRandomBytes(length: 32));
-      print('Creating backup: $backupId');
-
-      // Derive backup key and encrypt data
-      final Uint8List backupKey = Uint8List.fromList(deriveBip85(
-        xprv: extendedPrivateKey.xprv,
+      final List<int> backupKey = deriveBip85(
+        xprv: extendedPrivateKey,
         path: derivationPath,
-      ));
-      // Encrypt the data
-      final encResult =
-          await EncryptionService.aesEncrypt(backupKey, plainTextBytes);
+      );
 
-      final metadata = BackupMetadata(
-          backupId: backupId,
-          createdAt: DateTime.now().millisecondsSinceEpoch,
-          encryptedData: encResult);
-      final metadataJson = jsonEncode(metadata.toJson());
-      print(
-          'Successfully created backup: ${jsonDecode(metadataJson)["backupId"]}');
+      final backup = await BackupService.createBackup(
+        plaintext: plaintext,
+        backupKey: backupKey,
+      );
 
-      return (HEX.encode(backupKey), metadataJson);
-    } catch (e, stackTrace) {
-      print(stackTrace.toString());
+      return backup;
+    } catch (e) {
       if (e is BackupException) rethrow;
       throw BackupException('Failed to create backup: ${e.toString()}');
     }
   }
 
-  /// Restores data from an encrypted backup using a provided key
+  /// Restores data from an encrypted backup using a provided backup key
   ///
   /// Parameters:
-  /// - [metadata] - JSON string containing the backup metadata with:
-  ///   • Backup ID
-  ///   • Creation timestamp
-  ///   • Encrypted data (ciphertext, nonce, tag)
-  /// - [key] - Hex-encoded decryption key
-  ///
-  /// Returns the decrypted data as a UTF-8 string
-  ///
-  /// Throws [BackupException] if:
-  /// - The metadata JSON is invalid or malformed
-  /// - The decryption key is invalid hex
-  /// - The encrypted data components are invalid hex
-  /// - The decryption process fails
-  /// - The decrypted data is not valid UTF-8
+  /// - `backup` JSON string encoding the encrypted backup
+  /// - `backupkey` encryption key to decrypt the backup
   static Future<String> restoreBackup(
-    String metadata,
-    String key,
+    String backup,
+    List<int> backupKey,
   ) async {
     try {
-      final backupMetadata = parseMetadata(metadata);
+      final backupMetadata = Backup.fromString(backup);
 
-      print('Restoring backup: ${backupMetadata.backupId}');
-
-      // Validate and decode key
-      Uint8List keyBytes;
+      List<int> ciphertext, nonce, mac;
       try {
-        keyBytes = Uint8List.fromList(HEX.decode(key));
-      } catch (e) {
-        throw BackupException(
-            'Invalid decryption key format: must be valid hex');
-      }
-
-      // Decode encrypted components
-      Uint8List ciphertext;
-      Uint8List iv;
-      Uint8List? mac;
-      try {
-        ciphertext = Uint8List.fromList(
-          HEX.decode(backupMetadata.encryptedData.ciphertext),
-        );
-        iv = Uint8List.fromList(
-          HEX.decode(backupMetadata.encryptedData.nonce),
-        );
-        if (backupMetadata.encryptedData.tag != null) {
-          mac = Uint8List.fromList(
-            HEX.decode(backupMetadata.encryptedData.tag!),
-          );
-        }
+        ciphertext = HEX.decode(backupMetadata.ciphertext);
+        nonce = HEX.decode(backupMetadata.nonce);
+        mac = HEX.decode(backupMetadata.mac);
       } catch (e) {
         throw BackupException('Invalid encrypted data format: ${e.toString()}');
       }
 
-      // Decrypt data
       final plaintextBytes = await EncryptionService.decrypt(
         ciphertext: ciphertext,
-        iv: iv,
+        nonce: nonce,
         mac: mac,
-        keyBytes: keyBytes,
+        keyBytes: backupKey,
       );
 
-      // Convert to string
       try {
         final plaintext = utf8.decode(plaintextBytes);
-        print('Successfully restored backup: ${backupMetadata.backupId}');
         return plaintext;
       } catch (e) {
-        throw BackupException(
-            'Decrypted data is not valid UTF-8: ${e.toString()}');
+        throw BackupException('Data is not valid UTF-8: ${e.toString()}');
       }
-    } catch (e, stackTrace) {
-      print(stackTrace.toString());
+    } catch (e) {
       if (e is BackupException) rethrow;
       throw BackupException('Failed to restore backup: ${e.toString()}');
     }
   }
 
-  /// Restores data from mnemonic, passphrase and path,
+  /// Restores data from an encrypted backup using a provided backup key
   ///
   /// Parameters:
-  /// - [metadata] - JSON string containing the backup metadata with:
-  ///   • Backup ID
-  ///   • Creation timestamp
-  ///   • Encrypted data (ciphertext, nonce, tag)
-  /// - [mnemonic] - BIP39 mnemonic phrase for key derivation
-  /// - [derivationPath] - BIP85 derivation path (e.g., "m/83696968'/0'/0'")
-  /// - [network] - Optional network type ("mainnet" or "testnet", defaults to "mainnet")
-  /// - [language] - BIP39 language of the mnemonic (defaults to 'english')
-  ///
-  /// Returns the decrypted data as a UTF-8 string
-  ///
-  /// Throws [BackupException] if:
-  /// - The metadata JSON is invalid or malformed
-  /// - The mnemonic contains invalid words for the specified language
-  /// - The derivation path is invalid
-  /// - The encrypted data components are invalid hex
-  /// - The decryption process fails
-  /// - The decrypted data is not valid UTF-8
+  /// - `backup` JSON string encoding the encrypted backup
+  /// - `mnemonic` - BIP39 mnemonic phrase for key derivation
+  /// - `derivationPath` - BIP85 derivation path
+  /// - `network` - Optional network type ("mainnet" or "testnet", defaults to "mainnet")
+  /// - `language` - BIP39 language of the mnemonic
   static Future<String> restoreBackupFromBip85({
-    required String metadata,
+    required String backup,
     required String mnemonic,
     required String derivationPath,
     String? network,
     String language = 'english',
   }) async {
     try {
-      // Parse and validate metadata
-      final backupMetadata = parseMetadata(metadata);
-
-      print('Restoring backup: ${backupMetadata.backupId}');
-
-      // Validate mnemonic and derive key
-      final extendedPrivateKey = await ExtendedPrivateKey.fromString(
+      final extendedPrivateKey = await getRootXprv(
         mnemonic: mnemonic,
         language: language.bip39Language,
         networkType: network.networkType,
       );
 
-      // Derive backup key
-      final Uint8List backupKey = Uint8List.fromList(deriveBip85(
-        xprv: extendedPrivateKey.xprv,
+      final backupKey = deriveBip85(
+        xprv: extendedPrivateKey,
         path: derivationPath,
-      ));
+      );
 
-      // Decode encrypted components
-      Uint8List ciphertext;
-      Uint8List iv;
-      Uint8List? mac;
-      try {
-        ciphertext = Uint8List.fromList(
-          HEX.decode(backupMetadata.encryptedData.ciphertext),
-        );
-        iv = Uint8List.fromList(
-          HEX.decode(backupMetadata.encryptedData.nonce),
-        );
-        if (backupMetadata.encryptedData.tag != null) {
-          mac = Uint8List.fromList(
-            HEX.decode(backupMetadata.encryptedData.tag!),
-          );
-        }
-      } catch (e) {
-        throw BackupException('Invalid encrypted data format: ${e.toString()}');
-      }
-
-      // Decrypt data
-      final plaintextBytes = await EncryptionService.decrypt(
-        ciphertext: ciphertext,
-        iv: iv,
-        mac: mac,
-        keyBytes: backupKey,
-      ).onError((error, _) {
-        throw BackupException('Decryption failed: ${error.toString()}');
-      });
-
-      // Convert to string
-      try {
-        final plaintext = utf8.decode(plaintextBytes);
-        print('Successfully restored backup: ${backupMetadata.backupId}');
-        return plaintext;
-      } catch (e) {
-        throw BackupException(
-            'Decrypted data is not valid UTF-8: ${e.toString()}');
-      }
-    } catch (e, stackTrace) {
-      print(stackTrace.toString());
+      final plaintext = restoreBackup(backup, backupKey);
+      return plaintext;
+    } catch (e) {
       if (e is BackupException) rethrow;
       throw BackupException(
         'Failed to restore backup using path $derivationPath: ${e.toString()}',
       );
-    }
-  }
-}
-
-class ExtendedPrivateKey {
-  final String xprv;
-  final bip32.NetworkType networkType;
-
-  ExtendedPrivateKey({required this.xprv, required this.networkType});
-
-  static Future<ExtendedPrivateKey> fromString(
-      {required String mnemonic,
-      required bip32.NetworkType networkType,
-      String password = '',
-      required bip39.Language language}) async {
-    try {
-      final invalidWords =
-          mnemonic.split(' ').where((word) => !language.isValid(word)).toList();
-
-      if (invalidWords.isNotEmpty) {
-        throw BackupException(
-          'Invalid words found for ${language.name} language: '
-          '${invalidWords.join(", ")}',
-        );
-      }
-      final bip39Mnemonic =
-          bip39.Mnemonic.fromSentence(mnemonic, language, passphrase: password);
-
-      final master = bip32.BIP32
-          .fromSeed(Uint8List.fromList(bip39Mnemonic.seed), networkType);
-
-      return ExtendedPrivateKey(
-        xprv: master.toBase58(),
-        networkType: networkType,
-      );
-    } catch (e) {
-      throw BackupException('Failed to create extended private key: $e');
     }
   }
 }
