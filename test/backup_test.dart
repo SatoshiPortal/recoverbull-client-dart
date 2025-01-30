@@ -8,7 +8,8 @@ import 'package:test/test.dart';
 void main() {
   final key = HEX.decode(
       'fcb4a38e1d732dede321d13a6ffa024a38ecc4f40c88e9dcc3c9fe51fb942a6f');
-  final secret = utf8.encode('Hello, Encryption!');
+  final secret = utf8.encode(
+      'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about');
 
   final backupJson = BackupService.createBackup(
     secret: secret,
