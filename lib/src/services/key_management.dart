@@ -19,7 +19,7 @@ class KeyService {
   /// Stores an encrypted backup key on the remote key-server.
   ///
   /// Parameters:
-  /// - `backupId`: Hex-encoded
+  /// - `backupId`: Hex-encoded random bytes
   /// - `password`: The password used for key derivation.
   /// - `backupKey`: The bytes of the backup key
   /// - `salt`: The bytes of the salt used in key derivation.
@@ -53,7 +53,7 @@ class KeyService {
         '$keyServer/store',
         options: Options(headers: _contentTypeJson),
         data: {
-          'backup_id': backupId,
+          'identifier': backupId,
           'authentication_key': HEX.encode(authenticationKey),
           'encrypted_secret': backupKeyEncrypted,
         },
@@ -79,7 +79,7 @@ class KeyService {
   /// Recovers an encrypted backup key from the key server.
   ///
   /// Parameters:
-  /// - `backupId`: Hex-encoded
+  /// - `backupId`: Hex-encoded random bytes
   /// - `password`: The password used for key derivation.
   /// - `backupKey`: The bytes of the backup key
   /// - `salt`: The bytes of the salt used in key derivation.
@@ -107,12 +107,15 @@ class KeyService {
         '$keyServer/recover',
         options: Options(headers: _contentTypeJson),
         data: {
-          'backup_id': backupId,
+          'identifier': backupId,
           'authentication_key': HEX.encode(authenticationKey),
         },
       );
 
-      if (response.statusCode != 200) {
+      if (response.statusCode == 429) {
+        // Too many attempts
+        throw KeyServiceException(response.data);
+      } else if (response.statusCode != 200) {
         throw KeyServiceException(
           'Failed to recover key (${response.statusCode}): ${response.data}',
         );
