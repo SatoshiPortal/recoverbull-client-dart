@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:hex/hex.dart';
 import 'package:recoverbull/src/models/exceptions.dart';
@@ -44,10 +46,12 @@ class KeyService {
       final encryptionKey = derivatedKeys.$2;
 
       // Encrypt the backupKey using the encryption key
-      final backupKeyEncrypted = EncryptionService.encrypt(
+      final result = EncryptionService.encrypt(
         key: encryptionKey,
         plaintext: backupKey,
       );
+
+      final encrypted = EncryptionService.encode(result);
 
       final response = await _client.post(
         '$keyServer/store',
@@ -55,7 +59,7 @@ class KeyService {
         data: {
           'identifier': backupId,
           'authentication_key': HEX.encode(authenticationKey),
-          'encrypted_secret': backupKeyEncrypted,
+          'encrypted_secret': base64.encode(encrypted),
         },
       );
 
@@ -86,7 +90,6 @@ class KeyService {
   Future<List<int>> recoverBackupKey({
     required String backupId,
     required String password,
-    required List<int> nonce,
     required List<int> salt,
   }) async {
     try {
@@ -121,10 +124,14 @@ class KeyService {
         );
       }
 
-      final encryptedBackupKey = response.data['encrypted_secret'];
+      final encryptedSecret = base64.decode(response.data['encrypted_secret']);
+      final encryption = EncryptionService.decode(encryptedSecret);
+      final nonce = encryption.nonce;
+      final ciphertext = encryption.ciphertext;
+
       final backupKey = EncryptionService.decrypt(
         key: encryptionKey,
-        ciphertext: encryptedBackupKey,
+        ciphertext: ciphertext,
         nonce: nonce,
       );
       if (backupKey.isNotEmpty && backupKey.length == 32) return backupKey;

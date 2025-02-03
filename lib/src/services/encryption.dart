@@ -6,13 +6,19 @@ import 'package:recoverbull/recoverbull.dart';
 import 'package:pointycastle/export.dart';
 import 'package:recoverbull/src/models/exceptions.dart';
 
+typedef Encryption = ({
+  List<int> nonce,
+  List<int> ciphertext,
+  List<int> hmac,
+});
+
 /// Service handling encryption and decryption operations
 class EncryptionService {
   static const _16bytes = 16;
   static const _32bytes = 32;
 
   /// Encrypts data
-  static ({List<int> ciphertext, List<int> nonce, List<int> mac}) encrypt({
+  static Encryption encrypt({
     required List<int> key,
     required List<int> plaintext,
   }) {
@@ -25,9 +31,9 @@ class EncryptionService {
       isEncrypt: true,
     );
 
-    final mac = computeMac(ciphertext: ciphertext, key: key, nonce: nonce);
+    final hmac = computeHMac(ciphertext: ciphertext, key: key, nonce: nonce);
 
-    return (ciphertext: ciphertext, nonce: nonce, mac: mac);
+    return (nonce: nonce, ciphertext: ciphertext, hmac: hmac);
   }
 
   /// Decrypts data
@@ -35,13 +41,13 @@ class EncryptionService {
     required List<int> key,
     required List<int> ciphertext,
     required List<int> nonce,
-    List<int>? mac,
+    List<int>? hmac,
   }) {
-    final computedMac =
-        computeMac(nonce: nonce, key: key, ciphertext: ciphertext);
+    final computedHMac =
+        computeHMac(nonce: nonce, key: key, ciphertext: ciphertext);
 
-    if (mac != null && constantTimeComparison(computedMac, mac) == false) {
-      throw EncryptionException('Invalid MAC');
+    if (hmac != null && constantTimeComparison(computedHMac, hmac) == false) {
+      throw EncryptionException('Invalid HMac');
     }
 
     final plaintext = _encryption(
@@ -80,7 +86,7 @@ class EncryptionService {
     }
   }
 
-  static List<int> computeMac({
+  static List<int> computeHMac({
     required List<int> nonce,
     required List<int> key,
     required List<int> ciphertext,
@@ -89,20 +95,29 @@ class EncryptionService {
     final u8key = Uint8List.fromList(key);
     final u8ciphertext = Uint8List.fromList(ciphertext);
 
-    final hmac = HMac(SHA256Digest(), 64);
-    hmac.init(KeyParameter(u8key));
-    hmac.update(u8nonce, 0, u8nonce.length);
-    hmac.update(u8ciphertext, 0, u8ciphertext.length);
-    final mac = Uint8List(_32bytes);
-    hmac.doFinal(mac, 0);
-    return mac;
+    final hmacSha256 = HMac(SHA256Digest(), 64);
+    hmacSha256.init(KeyParameter(u8key));
+    hmacSha256.update(u8nonce, 0, u8nonce.length);
+    hmacSha256.update(u8ciphertext, 0, u8ciphertext.length);
+    final hmac = Uint8List(_32bytes);
+    hmacSha256.doFinal(hmac, 0);
+    return hmac;
   }
 
   static void _validateNonce(List<int> nonce) {
     if (nonce.length != _16bytes) {
       throw EncryptionException(
-        'Invalid IV length',
+        'Invalid nonce length',
         'Expected $_16bytes bytes, got ${nonce.length}',
+      );
+    }
+  }
+
+  static void _validateHMac(List<int> hmac) {
+    if (hmac.length != _32bytes) {
+      throw EncryptionException(
+        'Invalid HMac length',
+        'Expected $_16bytes bytes, got ${hmac.length}',
       );
     }
   }
@@ -110,9 +125,36 @@ class EncryptionService {
   static void _validateKey(List<int> key) {
     if (key.length != _32bytes) {
       throw EncryptionException(
-        'Invalid IV length',
+        'Invalid Key length',
         'Expected $_32bytes bytes, got ${key.length}',
       );
     }
+  }
+
+  static List<int> encode(Encryption encryption) {
+    _validateNonce(encryption.nonce);
+    _validateHMac(encryption.hmac);
+
+    return [
+      ...encryption.nonce, // first 16 bytes
+      ...encryption.ciphertext,
+      ...encryption.hmac // last 32 bytes
+    ];
+  }
+
+  static Encryption decode(List<int> bytes) {
+    // Extract the nonce (first 16 bytes)
+    final List<int> nonce = bytes.sublist(0, 16);
+
+    // Extract the HMAC (last 32 bytes)
+    final List<int> hmac = bytes.sublist(bytes.length - 32);
+
+    // Extract the ciphertext (bytes between the nonce and MAC)
+    final List<int> ciphertext = bytes.sublist(16, bytes.length - 32);
+
+    _validateNonce(nonce);
+    _validateHMac(hmac);
+
+    return (nonce: nonce, ciphertext: ciphertext, hmac: hmac);
   }
 }

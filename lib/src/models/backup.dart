@@ -17,19 +17,13 @@ class Backup with _$Backup {
     required int createdAt,
 
     /// Hex encoded Unique identifier for the backup
-    required String backupId,
+    required String id,
 
-    /// Hex encoded nonce used for backup file encryption
-    required String nonce,
-
-    /// Hex encoded ciphertext used to secure the backup
+    /// Base64 encoded nonce + ciphertext + HMac
     required String ciphertext,
 
     /// Hex encoded salt may be used for password key derivation (Argon2)
     required String salt,
-
-    /// Hex encoded MAC authentication mac for the encrypted data
-    required String mac,
   }) = _Backup;
 
   /// Creates a [Backup] instance from a JSON map.

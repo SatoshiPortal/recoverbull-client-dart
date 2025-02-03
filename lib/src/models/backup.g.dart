@@ -8,19 +8,15 @@ part of 'backup.dart';
 
 _$BackupImpl _$$BackupImplFromJson(Map<String, dynamic> json) => _$BackupImpl(
       createdAt: (json['createdAt'] as num).toInt(),
-      backupId: json['backupId'] as String,
-      nonce: json['nonce'] as String,
+      id: json['id'] as String,
       ciphertext: json['ciphertext'] as String,
       salt: json['salt'] as String,
-      mac: json['mac'] as String,
     );
 
 Map<String, dynamic> _$$BackupImplToJson(_$BackupImpl instance) =>
     <String, dynamic>{
       'createdAt': instance.createdAt,
-      'backupId': instance.backupId,
-      'nonce': instance.nonce,
+      'id': instance.id,
       'ciphertext': instance.ciphertext,
       'salt': instance.salt,
-      'mac': instance.mac,
     };

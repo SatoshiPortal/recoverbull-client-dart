@@ -24,19 +24,13 @@ mixin _$Backup {
   int get createdAt => throw _privateConstructorUsedError;
 
   /// Hex encoded Unique identifier for the backup
-  String get backupId => throw _privateConstructorUsedError;
+  String get id => throw _privateConstructorUsedError;
 
-  /// Hex encoded nonce used for backup file encryption
-  String get nonce => throw _privateConstructorUsedError;
-
-  /// Hex encoded ciphertext used to secure the backup
+  /// Base64 encoded nonce + ciphertext + HMac
   String get ciphertext => throw _privateConstructorUsedError;
 
   /// Hex encoded salt may be used for password key derivation (Argon2)
   String get salt => throw _privateConstructorUsedError;
-
-  /// Hex encoded MAC authentication mac for the encrypted data
-  String get mac => throw _privateConstructorUsedError;
 
   /// Serializes this Backup to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -52,13 +46,7 @@ abstract class $BackupCopyWith<$Res> {
   factory $BackupCopyWith(Backup value, $Res Function(Backup) then) =
       _$BackupCopyWithImpl<$Res, Backup>;
   @useResult
-  $Res call(
-      {int createdAt,
-      String backupId,
-      String nonce,
-      String ciphertext,
-      String salt,
-      String mac});
+  $Res call({int createdAt, String id, String ciphertext, String salt});
 }
 
 /// @nodoc
@@ -77,24 +65,18 @@ class _$BackupCopyWithImpl<$Res, $Val extends Backup>
   @override
   $Res call({
     Object? createdAt = null,
-    Object? backupId = null,
-    Object? nonce = null,
+    Object? id = null,
     Object? ciphertext = null,
     Object? salt = null,
-    Object? mac = null,
   }) {
     return _then(_value.copyWith(
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as int,
-      backupId: null == backupId
-          ? _value.backupId
-          : backupId // ignore: cast_nullable_to_non_nullable
-              as String,
-      nonce: null == nonce
-          ? _value.nonce
-          : nonce // ignore: cast_nullable_to_non_nullable
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
               as String,
       ciphertext: null == ciphertext
           ? _value.ciphertext
@@ -103,10 +85,6 @@ class _$BackupCopyWithImpl<$Res, $Val extends Backup>
       salt: null == salt
           ? _value.salt
           : salt // ignore: cast_nullable_to_non_nullable
-              as String,
-      mac: null == mac
-          ? _value.mac
-          : mac // ignore: cast_nullable_to_non_nullable
               as String,
     ) as $Val);
   }
@@ -119,13 +97,7 @@ abstract class _$$BackupImplCopyWith<$Res> implements $BackupCopyWith<$Res> {
       __$$BackupImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {int createdAt,
-      String backupId,
-      String nonce,
-      String ciphertext,
-      String salt,
-      String mac});
+  $Res call({int createdAt, String id, String ciphertext, String salt});
 }
 
 /// @nodoc
@@ -142,24 +114,18 @@ class __$$BackupImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? createdAt = null,
-    Object? backupId = null,
-    Object? nonce = null,
+    Object? id = null,
     Object? ciphertext = null,
     Object? salt = null,
-    Object? mac = null,
   }) {
     return _then(_$BackupImpl(
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as int,
-      backupId: null == backupId
-          ? _value.backupId
-          : backupId // ignore: cast_nullable_to_non_nullable
-              as String,
-      nonce: null == nonce
-          ? _value.nonce
-          : nonce // ignore: cast_nullable_to_non_nullable
+      id: null == id
+          ? _value.id
+          : id // ignore: cast_nullable_to_non_nullable
               as String,
       ciphertext: null == ciphertext
           ? _value.ciphertext
@@ -168,10 +134,6 @@ class __$$BackupImplCopyWithImpl<$Res>
       salt: null == salt
           ? _value.salt
           : salt // ignore: cast_nullable_to_non_nullable
-              as String,
-      mac: null == mac
-          ? _value.mac
-          : mac // ignore: cast_nullable_to_non_nullable
               as String,
     ));
   }
@@ -182,11 +144,9 @@ class __$$BackupImplCopyWithImpl<$Res>
 class _$BackupImpl implements _Backup {
   const _$BackupImpl(
       {required this.createdAt,
-      required this.backupId,
-      required this.nonce,
+      required this.id,
       required this.ciphertext,
-      required this.salt,
-      required this.mac});
+      required this.salt});
 
   factory _$BackupImpl.fromJson(Map<String, dynamic> json) =>
       _$$BackupImplFromJson(json);
@@ -197,13 +157,9 @@ class _$BackupImpl implements _Backup {
 
   /// Hex encoded Unique identifier for the backup
   @override
-  final String backupId;
+  final String id;
 
-  /// Hex encoded nonce used for backup file encryption
-  @override
-  final String nonce;
-
-  /// Hex encoded ciphertext used to secure the backup
+  /// Base64 encoded nonce + ciphertext + HMac
   @override
   final String ciphertext;
 
@@ -211,13 +167,9 @@ class _$BackupImpl implements _Backup {
   @override
   final String salt;
 
-  /// Hex encoded MAC authentication mac for the encrypted data
-  @override
-  final String mac;
-
   @override
   String toString() {
-    return 'Backup(createdAt: $createdAt, backupId: $backupId, nonce: $nonce, ciphertext: $ciphertext, salt: $salt, mac: $mac)';
+    return 'Backup(createdAt: $createdAt, id: $id, ciphertext: $ciphertext, salt: $salt)';
   }
 
   @override
@@ -227,19 +179,15 @@ class _$BackupImpl implements _Backup {
             other is _$BackupImpl &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
-            (identical(other.backupId, backupId) ||
-                other.backupId == backupId) &&
-            (identical(other.nonce, nonce) || other.nonce == nonce) &&
+            (identical(other.id, id) || other.id == id) &&
             (identical(other.ciphertext, ciphertext) ||
                 other.ciphertext == ciphertext) &&
-            (identical(other.salt, salt) || other.salt == salt) &&
-            (identical(other.mac, mac) || other.mac == mac));
+            (identical(other.salt, salt) || other.salt == salt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType, createdAt, backupId, nonce, ciphertext, salt, mac);
+  int get hashCode => Object.hash(runtimeType, createdAt, id, ciphertext, salt);
 
   /// Create a copy of Backup
   /// with the given fields replaced by the non-null parameter values.
@@ -260,11 +208,9 @@ class _$BackupImpl implements _Backup {
 abstract class _Backup implements Backup {
   const factory _Backup(
       {required final int createdAt,
-      required final String backupId,
-      required final String nonce,
+      required final String id,
       required final String ciphertext,
-      required final String salt,
-      required final String mac}) = _$BackupImpl;
+      required final String salt}) = _$BackupImpl;
 
   factory _Backup.fromJson(Map<String, dynamic> json) = _$BackupImpl.fromJson;
 
@@ -274,23 +220,15 @@ abstract class _Backup implements Backup {
 
   /// Hex encoded Unique identifier for the backup
   @override
-  String get backupId;
+  String get id;
 
-  /// Hex encoded nonce used for backup file encryption
-  @override
-  String get nonce;
-
-  /// Hex encoded ciphertext used to secure the backup
+  /// Base64 encoded nonce + ciphertext + HMac
   @override
   String get ciphertext;
 
   /// Hex encoded salt may be used for password key derivation (Argon2)
   @override
   String get salt;
-
-  /// Hex encoded MAC authentication mac for the encrypted data
-  @override
-  String get mac;
 
   /// Create a copy of Backup
   /// with the given fields replaced by the non-null parameter values.
