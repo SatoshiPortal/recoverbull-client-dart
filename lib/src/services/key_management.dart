@@ -51,7 +51,7 @@ class KeyService {
         plaintext: backupKey,
       );
 
-      final encrypted = EncryptionService.encode(result);
+      final encrypted = EncryptionService.mergeBytes(result);
 
       final response = await _client.post(
         '$keyServer/store',
@@ -125,7 +125,7 @@ class KeyService {
       }
 
       final encryptedSecret = base64.decode(response.data['encrypted_secret']);
-      final encryption = EncryptionService.decode(encryptedSecret);
+      final encryption = EncryptionService.splitBytes(encryptedSecret);
       final nonce = encryption.nonce;
       final ciphertext = encryption.ciphertext;
 

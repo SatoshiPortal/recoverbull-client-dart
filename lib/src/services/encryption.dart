@@ -131,7 +131,7 @@ class EncryptionService {
     }
   }
 
-  static List<int> encode(Encryption encryption) {
+  static List<int> mergeBytes(Encryption encryption) {
     _validateNonce(encryption.nonce);
     _validateHMac(encryption.hmac);
 
@@ -142,7 +142,7 @@ class EncryptionService {
     ];
   }
 
-  static Encryption decode(List<int> bytes) {
+  static Encryption splitBytes(List<int> bytes) {
     // Extract the nonce (first 16 bytes)
     final List<int> nonce = bytes.sublist(0, 16);
 

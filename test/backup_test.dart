@@ -17,7 +17,7 @@ void main() {
   );
   final backup = Backup.fromJson(backupJson);
   final encodedCiphertext = base64.decode(backup.ciphertext);
-  final encrypted = EncryptionService.decode(encodedCiphertext);
+  final encrypted = EncryptionService.splitBytes(encodedCiphertext);
   final ciphertext = encrypted.ciphertext;
   final nonce = encrypted.nonce;
   final hmac = encrypted.hmac;

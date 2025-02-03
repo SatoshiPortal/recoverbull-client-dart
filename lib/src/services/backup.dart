@@ -30,7 +30,7 @@ class BackupService {
         plaintext: secret,
       );
 
-      final encryptionEncoded = EncryptionService.encode(encryption);
+      final encryptionEncoded = EncryptionService.mergeBytes(encryption);
 
       // Create and encode backup
       final backup = Backup(
@@ -107,7 +107,7 @@ class BackupService {
       Encryption encryption;
       try {
         final ciphertextBytes = base64.decode(theBackup.ciphertext);
-        encryption = EncryptionService.decode(ciphertextBytes);
+        encryption = EncryptionService.splitBytes(ciphertextBytes);
       } catch (e) {
         throw BackupException('Invalid encrypted data format: ${e.toString()}');
       }
