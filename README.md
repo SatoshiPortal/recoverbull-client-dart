@@ -14,29 +14,6 @@ dependencies:
 ```
 
 
-## Usage Examples
+## Examples
 
-### Creating a Backup
-
-You can create backups either using a direct encryption key or BIP85 key derivation.
-
-```dart
-// Create a backup using a direct encryption key
-void example()  {
-    final backupKey = HEX.decode(
-        'fcb4a38e1d732dede321d13a6ffa024a38ecc4f40c88e9dcc3c9fe51fb942a6f');
-    final secret = utf8.encode('Super Secret!');
-
-    final backupJson = BackupService.createBackup(
-      secret: secret,
-      backupKey: backupKey,
-    );
-
-    final restoredSecret = BackupService.restoreBackup(
-      backup: backupJson,
-      backupKey: backupKey,
-    );
-
-    assert(utf8.encode(restoredSecret) == secret);
-}
-```
+Please look the [example folder](https://github.com/SatoshiPortal/recoverbull-client-dart/tree/main/example) 
