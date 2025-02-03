@@ -15,7 +15,7 @@ void main() async {
     secret: utf8.encode(secret),
     backupKey: HEX.decode(backupKey),
   );
-  final backup = Backup.fromString(backupJson);
+  final backup = Backup.fromJson(backupJson);
 
   print('backup created: ${backup.id}');
 

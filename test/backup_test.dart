@@ -15,8 +15,7 @@ void main() {
     secret: secret,
     backupKey: key,
   );
-
-  final backup = Backup.fromString(backupJson);
+  final backup = Backup.fromJson(backupJson);
   final encodedCiphertext = base64.decode(backup.ciphertext);
   final encrypted = EncryptionService.decode(encodedCiphertext);
   final ciphertext = encrypted.ciphertext;

@@ -102,7 +102,7 @@ class BackupService {
     required List<int> backupKey,
   }) {
     try {
-      final theBackup = Backup.fromString(backup);
+      final theBackup = Backup.fromJson(backup);
 
       Encryption encryption;
       try {

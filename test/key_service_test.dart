@@ -15,7 +15,7 @@ void main() {
     secret: secret,
     backupKey: backupKey,
   );
-  final backup = Backup.fromString(backupJson);
+  final backup = Backup.fromJson(backupJson);
 
   final env = DotEnv(includePlatformEnvironment: true)..load();
   final envSecretServer = env['SECRET_SERVER'];
