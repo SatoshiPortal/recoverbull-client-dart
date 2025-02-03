@@ -19,7 +19,7 @@ void main() {
     test('encrypt and decrypt', () {
       expect(encryption.ciphertext.isNotEmpty, true);
       expect(encryption.nonce.isNotEmpty, true);
-      expect(encryption.mac.isNotEmpty, true);
+      expect(encryption.hmac.isNotEmpty, true);
 
       final ciphertext = EncryptionService.decrypt(
         key: key,
@@ -35,7 +35,7 @@ void main() {
         key: key,
         ciphertext: encryption.ciphertext,
         nonce: encryption.nonce,
-        mac: encryption.mac,
+        hmac: encryption.hmac,
       );
 
       expect(utf8.decode(ciphertext), equals(utf8.decode(plaintext)));
@@ -47,7 +47,7 @@ void main() {
           key: key,
           ciphertext: encryption.ciphertext,
           nonce: encryption.nonce,
-          mac: [0],
+          hmac: [0],
         ),
         throwsA(isA<EncryptionException>()),
       );

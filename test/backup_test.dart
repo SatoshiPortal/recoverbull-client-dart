@@ -17,9 +17,11 @@ void main() {
   );
 
   final backup = Backup.fromString(backupJson);
-  final nonce = HEX.decode(backup.nonce);
-  final ciphertext = HEX.decode(backup.ciphertext);
-  final mac = HEX.decode(backup.mac);
+  final encodedCiphertext = base64.decode(backup.ciphertext);
+  final encrypted = EncryptionService.decode(encodedCiphertext);
+  final ciphertext = encrypted.ciphertext;
+  final nonce = encrypted.nonce;
+  final hmac = encrypted.hmac;
 
   group('EncryptionService', () {
     test('create backup', () {
@@ -27,13 +29,13 @@ void main() {
     });
 
     test('test MAC', () {
-      final computedMac = EncryptionService.computeMac(
+      final computedMac = EncryptionService.computeHMac(
         ciphertext: ciphertext,
         nonce: nonce,
         key: key,
       );
 
-      expect(mac, computedMac);
+      expect(hmac, computedMac);
     });
 
     test('restore', () {
