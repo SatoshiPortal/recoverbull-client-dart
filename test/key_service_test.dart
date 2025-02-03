@@ -20,8 +20,7 @@ void main() {
   final env = DotEnv(includePlatformEnvironment: true)..load();
   final envSecretServer = env['SECRET_SERVER'];
   if (env['SECRET_SERVER'] == null) {
-    print('please set SECRET_SERVER in a .env');
-    return;
+    throw Exception('please set SECRET_SERVER in a .env');
   }
 
   final secretServer = Uri.parse(envSecretServer!);
