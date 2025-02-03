@@ -41,7 +41,7 @@ class BackupService {
         salt: HEX.encode(generateRandomBytes(length: 16)),
       );
 
-      return json.encode(backup.toJson());
+      return backup.toJson();
     } catch (e) {
       if (e is BackupException) rethrow;
       throw BackupException('Failed to create backup: ${e.toString()}');

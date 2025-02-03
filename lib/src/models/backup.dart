@@ -35,14 +35,8 @@ class Backup {
   }
 
   factory Backup.fromJson(String json) {
-    var map = <String, dynamic>{};
     try {
-      final intermediate = jsonDecode(json);
-      if (intermediate is String) {
-        map = jsonDecode(intermediate);
-      } else {
-        map = intermediate;
-      }
+      final map = jsonDecode(json);
       return Backup.fromMap(map);
     } catch (e) {
       throw BackupException('Invalid backup data format: ${e.toString()}');
