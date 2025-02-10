@@ -11,7 +11,6 @@ dependencies:
   dio: ^5.7.0
   hex: ^0.2.0
   bip32: ^2.0.0
-  bip85: ^1.0.3
   bip39_mnemonic: ^3.0.7
   pointycastle: ^3.9.1
 

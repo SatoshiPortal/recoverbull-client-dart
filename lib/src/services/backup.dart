@@ -48,50 +48,6 @@ class BackupService {
     }
   }
 
-  /// Creates an encrypted backup using mnemonic phrase and
-  /// BIP85 derivation path to generate the backup key
-  ///
-  /// Parameters:
-  /// - `secret` - The data to be encrypted and backed up
-  /// - `mnemonic` - The BIP39 mnemonic phrase used for key derivation
-  /// - `derivationPath` - The BIP85 derivation path
-  /// - `language` - The BIP39 language of the mnemonic
-  /// - `network` - Optional network type ("mainnet" or "testnet", defaults to "mainnet")
-  static String createBackupWithBIP85({
-    required List<int> secret,
-    required String mnemonic,
-    required String derivationPath,
-    String language = 'english',
-    String? network,
-  }) {
-    try {
-      if (secret.isEmpty) {
-        throw BackupException('Backup data cannot be empty');
-      }
-
-      final extendedPrivateKey = getRootXprv(
-        language: language.bip39Language,
-        mnemonic: mnemonic,
-        networkType: network.networkType,
-      );
-
-      final List<int> backupKey = deriveBip85(
-        xprv: extendedPrivateKey,
-        path: derivationPath,
-      );
-
-      final backup = BackupService.createBackup(
-        secret: secret,
-        backupKey: backupKey,
-      );
-
-      return backup;
-    } catch (e) {
-      if (e is BackupException) rethrow;
-      throw BackupException('Failed to create backup: ${e.toString()}');
-    }
-  }
-
   /// Restores data from an encrypted backup using a provided backup key
   ///
   /// Parameters:
@@ -128,43 +84,6 @@ class BackupService {
     } catch (e) {
       if (e is BackupException) rethrow;
       throw BackupException('Failed to restore backup: ${e.toString()}');
-    }
-  }
-
-  /// Restores data from an encrypted backup using a provided backup key
-  ///
-  /// Parameters:
-  /// - `backup` JSON string encoding the encrypted backup
-  /// - `mnemonic` - BIP39 mnemonic phrase for key derivation
-  /// - `derivationPath` - BIP85 derivation path
-  /// - `network` - Optional network type ("mainnet" or "testnet", defaults to "mainnet")
-  /// - `language` - BIP39 language of the mnemonic
-  static String restoreBackupFromBip85({
-    required String backup,
-    required String mnemonic,
-    required String derivationPath,
-    String? network,
-    String language = 'english',
-  }) {
-    try {
-      final extendedPrivateKey = getRootXprv(
-        mnemonic: mnemonic,
-        language: language.bip39Language,
-        networkType: network.networkType,
-      );
-
-      final backupKey = deriveBip85(
-        xprv: extendedPrivateKey,
-        path: derivationPath,
-      );
-
-      final plaintext = restoreBackup(backup: backup, backupKey: backupKey);
-      return plaintext;
-    } catch (e) {
-      if (e is BackupException) rethrow;
-      throw BackupException(
-        'Failed to restore backup using path $derivationPath: ${e.toString()}',
-      );
     }
   }
 }

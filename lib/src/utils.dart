@@ -2,7 +2,6 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'package:bip32/bip32.dart' as bip32;
 import 'package:bip39_mnemonic/bip39_mnemonic.dart' as bip39;
-import 'package:bip85/bip85.dart';
 import 'package:hex/hex.dart';
 import 'package:pointycastle/digests/sha256.dart';
 import 'package:recoverbull/src/models/exceptions.dart';
@@ -14,15 +13,6 @@ List<int> generateRandomBytes({int length = 32}) {
     bytes[i] = secureRandom.nextInt(256);
   }
   return bytes;
-}
-
-List<int> deriveBip85({required String xprv, required String path}) {
-  try {
-    final derived = derive(xprv: xprv, path: path).sublist(0, 32);
-    return derived;
-  } catch (e) {
-    throw BackupException('Failed to derive backup key: ${e.toString()}');
-  }
 }
 
 extension Bip32NetworkTypeParser on String? {
