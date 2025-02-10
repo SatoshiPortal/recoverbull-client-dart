@@ -40,8 +40,16 @@ void main() {
     });
 
     test('fetch', () async {
+      final backupIdForFetchTest = HEX.encode(generateRandomBytes());
+      await keyService.storeBackupKey(
+        backupId: backupIdForFetchTest,
+        password: password,
+        backupKey: backupKey,
+        salt: HEX.decode(backup.salt),
+      );
+
       final backupKeyRecovered = await keyService.recoverBackupKey(
-        backupId: backup.id,
+        backupId: backupIdForFetchTest,
         password: password,
         salt: HEX.decode(backup.salt),
       );
