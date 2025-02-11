@@ -28,6 +28,18 @@ void main() {
   final keyService = KeyService(keyServer: secretServer);
 
   group('EncryptionService', () {
+    test('info', () async {
+      final response = await keyService.serverInfo();
+
+      expect(response['cooldown'], isNotNull);
+      expect(response['cooldown'], isPositive);
+      expect(response['message'], isNotNull);
+      expect(response['message'], isNotEmpty);
+      expect(response['secret_max_length'], isNotNull);
+      expect(response['secret_max_length'], isPositive);
+      expect(response['timestamp'], isNotNull);
+      expect(response['timestamp'], isPositive);
+    });
     test('store', () async {
       expect(
           () async => await keyService.storeBackupKey(

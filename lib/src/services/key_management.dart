@@ -18,6 +18,17 @@ class KeyService {
   KeyService({required this.keyServer, Dio? client})
       : _client = client ?? Dio();
 
+  Future<Map<String, dynamic>> serverInfo() async {
+    final response = await _client.get(
+      '$keyServer/info',
+      options: Options(headers: _contentTypeJson),
+    );
+
+    if (response.statusCode == 200) return response.data;
+
+    throw KeyServiceException(response.statusMessage.toString());
+  }
+
   /// Stores an encrypted backup key on the remote key-server.
   ///
   /// Parameters:

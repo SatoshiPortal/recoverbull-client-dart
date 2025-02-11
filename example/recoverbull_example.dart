@@ -39,6 +39,9 @@ void main() async {
   final password = "PasswØrd";
   final keyService = KeyService(keyServer: secretServer);
 
+  final serverInfo = await keyService.serverInfo();
+  print(serverInfo);
+
   await keyService.storeBackupKey(
     backupId: backup.id,
     password: password,
