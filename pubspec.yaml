@@ -13,6 +13,10 @@ dependencies:
   bip32: ^2.0.0
   bip39_mnemonic: ^3.0.7
   pointycastle: ^3.9.1
+  nostr:
+    git:
+      url: https://github.com/ethicnology/dart-nostr
+      ref: develop
 
 dev_dependencies:
   flutter_lints: ^5.0.0

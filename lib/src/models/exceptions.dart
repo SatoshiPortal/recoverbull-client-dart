@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 /// Custom exception for encryption operations
 class EncryptionException implements Exception {
   final String message;
@@ -24,12 +26,15 @@ class BackupException implements Exception {
 
 /// Custom exception for key management operations
 class KeyServiceException implements Exception {
-  final String message;
-  final dynamic cause;
+  late int? code;
+  late String? message;
 
-  const KeyServiceException(this.message, [this.cause]);
+  KeyServiceException({this.code, this.message});
 
-  @override
-  String toString() =>
-      'KeyServiceException: $message${cause != null ? ' ($cause)' : ''}';
+  KeyServiceException.fromResponse(Response<dynamic> response) {
+    KeyServiceException(
+      code: response.statusCode,
+      message: response.data['error'],
+    );
+  }
 }

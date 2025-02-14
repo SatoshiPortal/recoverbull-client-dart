@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:hex/hex.dart';
+import 'package:nostr/nostr.dart';
 import 'package:recoverbull/src/models/exceptions.dart';
 import 'package:recoverbull/src/services/argon2.dart';
 import 'package:recoverbull/src/services/encryption.dart';
@@ -11,25 +12,26 @@ import 'package:recoverbull/src/services/encryption.dart';
 /// key derivation, encryption, and communication with the server.
 class KeyService {
   final Uri keyServer;
-  final Dio _client;
-  static const _contentTypeJson = {'Content-Type': 'application/json'};
+  final String keyServerPublicKey;
+  late Dio _client;
+  late String _privateKey;
 
-  /// Creates an instance of [KeyService].
-  KeyService({required this.keyServer, Dio? client})
-      : _client = client ?? Dio();
-
-  Future<Map<String, dynamic>> serverInfo() async {
-    final response = await _client.get(
-      '$keyServer/info',
-      options: Options(headers: _contentTypeJson),
-    );
-
-    if (response.statusCode == 200) return response.data;
-
-    throw KeyServiceException(response.statusMessage.toString());
+  // Private constructor
+  KeyService({
+    required this.keyServer,
+    required this.keyServerPublicKey,
+  }) {
+    _privateKey = Keychain.generate().private;
+    _client = Dio(BaseOptions(headers: {'Content-Type': 'application/json'}));
   }
 
-  /// Stores an encrypted backup key on the remote key-server.
+  Future<Map<String, dynamic>> serverInfo() async {
+    final response = await _client.get('$keyServer/info');
+    if (response.statusCode == 200) return response.data;
+    throw KeyServiceException.fromResponse(response);
+  }
+
+  /// Stores an encryptedBackupKey backup key on the remote key-server.
   ///
   /// Parameters:
   /// - `backupId`: Hex-encoded random bytes
@@ -49,7 +51,8 @@ class KeyService {
         length: 32,
       );
       if (derivatedKeys.$1.length != 32 || derivatedKeys.$2.length != 32) {
-        throw KeyServiceException('Each key should have the same length');
+        throw KeyServiceException(
+            message: 'Each key should have the same length');
       }
       // authentication key will be consumed by the key server
       final authenticationKey = derivatedKeys.$1;
@@ -57,41 +60,28 @@ class KeyService {
       final encryptionKey = derivatedKeys.$2;
 
       // Encrypt the backupKey using the encryption key
-      final result = EncryptionService.encrypt(
+      final backupKeyEncryption = EncryptionService.encrypt(
         key: encryptionKey,
         plaintext: backupKey,
       );
+      final encryptedBackupKey =
+          EncryptionService.mergeBytes(backupKeyEncryption);
 
-      final encrypted = EncryptionService.mergeBytes(result);
-
-      final response = await _client.post(
-        '$keyServer/store',
-        options: Options(headers: _contentTypeJson),
-        data: {
-          'identifier': backupId,
-          'authentication_key': HEX.encode(authenticationKey),
-          'encrypted_secret': base64.encode(encrypted),
-        },
-      );
+      final response = await _postEncryptedBody('store', {
+        'identifier': backupId,
+        'authentication_key': HEX.encode(authenticationKey),
+        'encrypted_secret': base64.encode(encryptedBackupKey),
+      });
 
       if (response.statusCode == 201) return;
 
-      if (response.statusCode == 403) {
-        throw const KeyServiceException('Key already stored on server');
-      }
-
-      throw KeyServiceException(
-        'Failed to store key on server (${response.statusCode})',
-      );
+      throw KeyServiceException.fromResponse(response);
     } catch (e) {
-      if (e is KeyServiceException) rethrow;
-      throw KeyServiceException(
-        'Failed to store backup key on server: ${e.toString()}',
-      );
+      rethrow;
     }
   }
 
-  /// Recovers an encrypted backup key from the key server.
+  /// Recovers an encryptedBackupKey backup key from the key server.
   ///
   /// Parameters:
   /// - `backupId`: Hex-encoded random bytes
@@ -110,33 +100,35 @@ class KeyService {
         length: 32,
       );
       if (derivatedKeys.$1.length != 32 || derivatedKeys.$2.length != 32) {
-        throw KeyServiceException('Each key should have the same length');
+        throw KeyServiceException(
+          message: 'Each key should have the same length',
+        );
       }
       // authentication key will be consumed by the key server
       final authenticationKey = derivatedKeys.$1;
       // encryption key will cipher the secret before storage on the key server.
       final encryptionKey = derivatedKeys.$2;
 
-      final response = await _client.post(
-        '$keyServer/recover',
-        options: Options(headers: _contentTypeJson),
-        data: {
-          'identifier': backupId,
-          'authentication_key': HEX.encode(authenticationKey),
-        },
-      );
+      final response = await _postEncryptedBody('fetch', {
+        'identifier': backupId,
+        'authentication_key': HEX.encode(authenticationKey),
+      });
 
-      if (response.statusCode == 429) {
-        // Too many attempts
-        throw KeyServiceException(response.data);
-      } else if (response.statusCode != 200) {
-        throw KeyServiceException(
-          'Failed to recover key (${response.statusCode}): ${response.data}',
-        );
+      if (response.statusCode != 200) {
+        throw KeyServiceException.fromResponse(response);
       }
 
-      final encryptedSecret = base64.decode(response.data['encrypted_secret']);
-      final encryption = EncryptionService.splitBytes(encryptedSecret);
+      final encryptedResponse = response.data['encrypted_response'];
+      final jsonBody = await Nip44.decrypt(
+        payload: encryptedResponse,
+        recipientPrivateKey: _privateKey,
+        senderPublicKey: keyServerPublicKey,
+      );
+
+      final body = json.decode(jsonBody);
+
+      final encryptedBackupKey = base64.decode(body['encrypted_secret']);
+      final encryption = EncryptionService.splitBytes(encryptedBackupKey);
       final nonce = encryption.nonce;
       final ciphertext = encryption.ciphertext;
 
@@ -147,14 +139,26 @@ class KeyService {
       );
       if (backupKey.isNotEmpty && backupKey.length == 32) return backupKey;
 
-      throw const KeyServiceException(
-        'Invalid backup key format received from server',
-      );
-    } catch (e) {
-      if (e is KeyServiceException) rethrow;
       throw KeyServiceException(
-        'Failed to recover backup key from server: ${e.toString()}',
-      );
+          message: 'Invalid backup key format received from server');
+    } catch (e) {
+      rethrow;
     }
+  }
+
+  Future<Response> _postEncryptedBody(
+    String endpoint,
+    Map<String, dynamic> body,
+  ) async {
+    final encryptedBody = await Nip44.encrypt(
+      plaintext: json.encode(body),
+      senderPrivateKey: _privateKey,
+      recipientPublicKey: keyServerPublicKey,
+    );
+
+    return await _client.post('$keyServer/$endpoint', data: {
+      'public_key': Keychain(_privateKey).public,
+      'encrypted_body': encryptedBody,
+    });
   }
 }

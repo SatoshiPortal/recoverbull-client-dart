@@ -25,7 +25,11 @@ void main() {
 
   final secretServer = Uri.parse(envSecretServer!);
   final password = "PasswØrd";
-  final keyService = KeyService(keyServer: secretServer);
+  final keyService = KeyService(
+    keyServer: secretServer,
+    keyServerPublicKey:
+        '6a04ab98d9e4774ad806e302dddeb63bea16b5cb5f223ee77478e861bb583eb3',
+  );
 
   group('EncryptionService', () {
     test('info', () async {
@@ -33,13 +37,13 @@ void main() {
 
       expect(response['cooldown'], isNotNull);
       expect(response['cooldown'], isPositive);
-      expect(response['message'], isNotNull);
-      expect(response['message'], isNotEmpty);
+      expect(response['canary'], '🐦');
       expect(response['secret_max_length'], isNotNull);
       expect(response['secret_max_length'], isPositive);
       expect(response['timestamp'], isNotNull);
       expect(response['timestamp'], isPositive);
     });
+
     test('store', () async {
       expect(
           () async => await keyService.storeBackupKey(
@@ -52,7 +56,8 @@ void main() {
     });
 
     test('fetch', () async {
-      final backupIdForFetchTest = HEX.encode(generateRandomBytes());
+      final backupIdForFetchTest = HEX.encode(generateRandomBytes(length: 32));
+
       await keyService.storeBackupKey(
         backupId: backupIdForFetchTest,
         password: password,
@@ -65,6 +70,7 @@ void main() {
         password: password,
         salt: HEX.decode(backup.salt),
       );
+
       expect(backupKey, backupKeyRecovered);
     });
   });

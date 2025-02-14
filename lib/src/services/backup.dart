@@ -37,7 +37,6 @@ class BackupService {
         id: HEX.encode(generateRandomBytes(length: 32)),
         createdAt: DateTime.now().millisecondsSinceEpoch,
         ciphertext: base64.encode(encryptionEncoded),
-        // may be used with Argon2
         salt: HEX.encode(generateRandomBytes(length: 16)),
       );
 

@@ -37,7 +37,11 @@ void main() async {
   // store the backup key on the key server
   final secretServer = Uri.parse(envSecretServer!);
   final password = "PasswØrd";
-  final keyService = KeyService(keyServer: secretServer);
+  final keyService = KeyService(
+    keyServer: secretServer,
+    keyServerPublicKey:
+        '6a04ab98d9e4774ad806e302dddeb63bea16b5cb5f223ee77478e861bb583eb3',
+  );
 
   final serverInfo = await keyService.serverInfo();
   print(serverInfo);
