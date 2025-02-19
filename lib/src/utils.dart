@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:bip32/bip32.dart' as bip32;
 import 'package:bip39_mnemonic/bip39_mnemonic.dart' as bip39;
 import 'package:hex/hex.dart';
+import 'package:nostr/nostr.dart';
 import 'package:pointycastle/digests/sha256.dart';
 import 'package:recoverbull/src/models/exceptions.dart';
 
@@ -128,5 +129,39 @@ String getRootXprv({
     return master.toBase58();
   } catch (e) {
     throw BackupException('Failed to create extended private key: $e');
+  }
+}
+
+void checkSignature({
+  required String pubkey,
+  required String message,
+  required String signature,
+}) {
+  final isSignatureValid = Schnorr.verify(
+    publicKey: pubkey,
+    message: message,
+    signature: signature,
+  );
+
+  if (isSignatureValid == false) {
+    throw KeyServiceException(
+      message:
+          'Invalid signature detected. This may indicate a potential man-in-the-middle (MITM) attack.',
+    );
+  }
+}
+
+void checkTimestamp({required int timestamp}) {
+  final currentTime = DateTime.now().toUtc();
+  final givenDateTime =
+      DateTime.fromMillisecondsSinceEpoch(timestamp * 1000, isUtc: true);
+
+  final difference = currentTime.difference(givenDateTime);
+
+  if (difference.inSeconds.abs() > 60) {
+    throw KeyServiceException(
+      message:
+          'Invalid timestamp: The provided timestamp is delayed by more than one minute. Please ensure your system clock is synchronized and try again.',
+    );
   }
 }

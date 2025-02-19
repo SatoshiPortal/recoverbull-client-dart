@@ -3,7 +3,10 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:hex/hex.dart';
 import 'package:nostr/nostr.dart';
+import 'package:recoverbull/recoverbull.dart';
 import 'package:recoverbull/src/models/exceptions.dart';
+import 'package:recoverbull/src/models/info.dart';
+import 'package:recoverbull/src/models/payload.dart';
 import 'package:recoverbull/src/services/argon2.dart';
 import 'package:recoverbull/src/services/encryption.dart';
 
@@ -14,20 +17,40 @@ class KeyService {
   final Uri keyServer;
   final String keyServerPublicKey;
   late Dio _client;
-  late String _privateKey;
+  late Keys _keys;
 
-  // Private constructor
+  // secret constructor
   KeyService({
     required this.keyServer,
     required this.keyServerPublicKey,
   }) {
-    _privateKey = Keychain.generate().private;
+    _keys = Keys.generate();
     _client = Dio(BaseOptions(headers: {'Content-Type': 'application/json'}));
   }
 
-  Future<Map<String, dynamic>> serverInfo() async {
+  Future<Info> serverInfo() async {
     final response = await _client.get('$keyServer/info');
-    if (response.statusCode == 200) return response.data;
+
+    if (response.statusCode == 200) {
+      final signedResponse = response.data;
+      final signature = signedResponse['signature'] as String;
+      final payloadString = signedResponse['response'] as String;
+      final payloadBytes = utf8.encode(payloadString);
+      final hashedPayload = sha256(payloadBytes);
+
+      checkSignature(
+        pubkey: keyServerPublicKey,
+        message: HEX.encode(hashedPayload),
+        signature: signature,
+      );
+
+      final payload = Payload.fromMap(json.decode(payloadString));
+      final info = Info.fromMap(json.decode(payload.data));
+      checkTimestamp(timestamp: payload.timestamp);
+
+      return info;
+    }
+
     throw KeyServiceException.fromResponse(response);
   }
 
@@ -67,7 +90,7 @@ class KeyService {
       final encryptedBackupKey =
           EncryptionService.mergeBytes(backupKeyEncryption);
 
-      final response = await _postEncryptedBody('store', {
+      final response = await _postEncryptedBody('/store', {
         'identifier': backupId,
         'authentication_key': HEX.encode(authenticationKey),
         'encrypted_secret': base64.encode(encryptedBackupKey),
@@ -81,17 +104,65 @@ class KeyService {
     }
   }
 
-  /// Recovers an encryptedBackupKey backup key from the key server.
+  /// Fetch an encryptedBackupKey backup key from the key server.
   ///
   /// Parameters:
   /// - `backupId`: Hex-encoded random bytes
   /// - `password`: The password used for key derivation.
-  /// - `backupKey`: The bytes of the backup key
   /// - `salt`: The bytes of the salt used in key derivation.
-  Future<List<int>> recoverBackupKey({
+  Future<List<int>> fetchBackupKey({
     required String backupId,
     required String password,
     required List<int> salt,
+  }) async {
+    return _fetchKey(
+      backupId: backupId,
+      password: password,
+      salt: salt,
+      isTrashingSecret: false,
+    );
+  }
+
+  /// Delete an encryptedBackupKey backup key from the key server.
+  ///
+  /// Parameters:
+  /// - `backupId`: Hex-encoded random bytes
+  /// - `password`: The password used for key derivation.
+  /// - `salt`: The bytes of the salt used in key derivation.
+  Future<List<int>> trashBackupKey({
+    required String backupId,
+    required String password,
+    required List<int> salt,
+  }) async {
+    return _fetchKey(
+      backupId: backupId,
+      password: password,
+      salt: salt,
+      isTrashingSecret: true,
+    );
+  }
+
+  Future<Response> _postEncryptedBody(
+    String endpoint,
+    Map<String, dynamic> body,
+  ) async {
+    final encryptedBody = await Nip44.encrypt(
+      plaintext: json.encode(body),
+      senderSecretKey: _keys.secret,
+      recipientPublicKey: keyServerPublicKey,
+    );
+
+    return await _client.post('$keyServer$endpoint', data: {
+      'public_key': _keys.public,
+      'encrypted_body': encryptedBody,
+    });
+  }
+
+  Future<List<int>> _fetchKey({
+    required String backupId,
+    required String password,
+    required List<int> salt,
+    required bool isTrashingSecret,
   }) async {
     try {
       final derivatedKeys = Argon2.computeTwoKeysFromPassword(
@@ -109,25 +180,41 @@ class KeyService {
       // encryption key will cipher the secret before storage on the key server.
       final encryptionKey = derivatedKeys.$2;
 
-      final response = await _postEncryptedBody('fetch', {
+      var endpoint = '/fetch';
+      if (isTrashingSecret) endpoint = '/trash';
+
+      final response = await _postEncryptedBody(endpoint, {
         'identifier': backupId,
         'authentication_key': HEX.encode(authenticationKey),
       });
 
-      if (response.statusCode != 200) {
+      if (response.statusCode != 200 && response.statusCode != 202) {
         throw KeyServiceException.fromResponse(response);
       }
 
-      final encryptedResponse = response.data['encrypted_response'];
-      final jsonBody = await Nip44.decrypt(
-        payload: encryptedResponse,
-        recipientPrivateKey: _privateKey,
+      final signedResponse = response.data;
+      final signature = signedResponse['signature'] as String;
+      final payloadString = signedResponse['response'] as String;
+      final payloadBytes = utf8.encode(payloadString);
+      final hashedPayload = sha256(payloadBytes);
+
+      checkSignature(
+        pubkey: keyServerPublicKey,
+        message: HEX.encode(hashedPayload),
+        signature: signature,
+      );
+
+      final decryptedResponse = await Nip44.decrypt(
+        payload: payloadString,
+        recipientSecretKey: _keys.secret,
         senderPublicKey: keyServerPublicKey,
       );
 
-      final body = json.decode(jsonBody);
+      final payload = Payload.fromMap(json.decode(decryptedResponse));
+      checkTimestamp(timestamp: payload.timestamp);
 
-      final encryptedBackupKey = base64.decode(body['encrypted_secret']);
+      final data = json.decode(payload.data);
+      final encryptedBackupKey = base64.decode(data['encrypted_secret']);
       final encryption = EncryptionService.splitBytes(encryptedBackupKey);
       final nonce = encryption.nonce;
       final ciphertext = encryption.ciphertext;
@@ -144,21 +231,5 @@ class KeyService {
     } catch (e) {
       rethrow;
     }
-  }
-
-  Future<Response> _postEncryptedBody(
-    String endpoint,
-    Map<String, dynamic> body,
-  ) async {
-    final encryptedBody = await Nip44.encrypt(
-      plaintext: json.encode(body),
-      senderPrivateKey: _privateKey,
-      recipientPublicKey: keyServerPublicKey,
-    );
-
-    return await _client.post('$keyServer/$endpoint', data: {
-      'public_key': Keychain(_privateKey).public,
-      'encrypted_body': encryptedBody,
-    });
   }
 }

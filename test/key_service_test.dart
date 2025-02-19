@@ -31,17 +31,15 @@ void main() {
         '6a04ab98d9e4774ad806e302dddeb63bea16b5cb5f223ee77478e861bb583eb3',
   );
 
-  group('EncryptionService', () {
+  group('KeyService', () {
     test('info', () async {
-      final response = await keyService.serverInfo();
+      final info = await keyService.serverInfo();
 
-      expect(response['cooldown'], isNotNull);
-      expect(response['cooldown'], isPositive);
-      expect(response['canary'], '🐦');
-      expect(response['secret_max_length'], isNotNull);
-      expect(response['secret_max_length'], isPositive);
-      expect(response['timestamp'], isNotNull);
-      expect(response['timestamp'], isPositive);
+      expect(info.cooldown, isNotNull);
+      expect(info.cooldown, isPositive);
+      expect(info.canary, '🐦');
+      expect(info.secretMaxLength, isNotNull);
+      expect(info.secretMaxLength, isPositive);
     });
 
     test('store', () async {
@@ -65,13 +63,39 @@ void main() {
         salt: HEX.decode(backup.salt),
       );
 
-      final backupKeyRecovered = await keyService.recoverBackupKey(
+      final backupKeyRecovered = await keyService.fetchBackupKey(
         backupId: backupIdForFetchTest,
         password: password,
         salt: HEX.decode(backup.salt),
       );
-
       expect(backupKey, backupKeyRecovered);
+    });
+
+    test('trash', () async {
+      final backupIdForTrashTest = HEX.encode(generateRandomBytes(length: 32));
+
+      await keyService.storeBackupKey(
+        backupId: backupIdForTrashTest,
+        password: password,
+        backupKey: backupKey,
+        salt: HEX.decode(backup.salt),
+      );
+
+      final trashedBackupKey = await keyService.trashBackupKey(
+        backupId: backupIdForTrashTest,
+        password: password,
+        salt: HEX.decode(backup.salt),
+      );
+      expect(backupKey, trashedBackupKey);
+
+      expect(
+        () async => await keyService.fetchBackupKey(
+          backupId: backupIdForTrashTest,
+          password: password,
+          salt: HEX.decode(backup.salt),
+        ),
+        throwsException,
+      );
     });
   });
 }

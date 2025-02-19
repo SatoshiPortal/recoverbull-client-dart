@@ -54,7 +54,7 @@ void main() async {
   );
   print('backup key stored encrypted on the server');
 
-  final backupKeyBytes = await keyService.recoverBackupKey(
+  final backupKeyBytes = await keyService.fetchBackupKey(
     backupId: backup.id,
     password: password,
     salt: HEX.decode(backup.salt),
