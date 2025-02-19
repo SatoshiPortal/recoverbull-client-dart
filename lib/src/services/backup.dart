@@ -15,7 +15,10 @@ class BackupService {
   static String createBackup({
     required List<int> secret,
     required List<int> backupKey,
+    DateTime? createdAt,
   }) {
+    createdAt ??= DateTime.now().toUtc();
+
     try {
       if (secret.isEmpty) {
         throw BackupException('Backup data cannot be empty');
@@ -35,7 +38,7 @@ class BackupService {
       // Create and encode backup
       final backup = Backup(
         id: HEX.encode(generateRandomBytes(length: 32)),
-        createdAt: DateTime.now().millisecondsSinceEpoch,
+        createdAt: createdAt.millisecondsSinceEpoch,
         ciphertext: base64.encode(encryptionEncoded),
         salt: HEX.encode(generateRandomBytes(length: 16)),
       );
