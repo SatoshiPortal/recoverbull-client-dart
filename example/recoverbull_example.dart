@@ -43,8 +43,10 @@ void main() async {
         '6a04ab98d9e4774ad806e302dddeb63bea16b5cb5f223ee77478e861bb583eb3',
   );
 
-  final serverInfo = await keyService.serverInfo();
-  print(serverInfo);
+  final info = await keyService.serverInfo();
+  print('cooldown: ${info.cooldown}');
+  print('canary: ${info.canary}');
+  print('secretMaxLength: ${info.secretMaxLength} characters');
 
   await keyService.storeBackupKey(
     backupId: backup.id,

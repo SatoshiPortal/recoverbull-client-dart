@@ -19,7 +19,7 @@ class KeyService {
   late Dio _client;
   late Keys _keys;
 
-  // secret constructor
+  // constructor
   KeyService({
     required this.keyServer,
     required this.keyServerPublicKey,
@@ -28,6 +28,10 @@ class KeyService {
     _client = Dio(BaseOptions(headers: {'Content-Type': 'application/json'}));
   }
 
+  /// serverInfo can be useful to check if the server is running and get infos such as
+  /// - cooldown
+  /// - canary
+  /// - signature
   Future<Info> serverInfo() async {
     final response = await _client.get('$keyServer/info');
 
@@ -68,6 +72,13 @@ class KeyService {
     required List<int> salt,
   }) async {
     try {
+      if (salt.length != 16) {
+        throw KeyServiceException(
+          message: '16 random secure bytes are expected for the salt',
+        );
+      }
+
+      // Derive two keys from the password and salt using Argon2
       final derivatedKeys = Argon2.computeTwoKeysFromPassword(
         password: password,
         salt: salt,
@@ -90,6 +101,7 @@ class KeyService {
       final encryptedBackupKey =
           EncryptionService.mergeBytes(backupKeyEncryption);
 
+      // Encrypt the whole request body
       final response = await _postEncryptedBody('/store', {
         'identifier': backupId,
         'authentication_key': HEX.encode(authenticationKey),
@@ -165,6 +177,7 @@ class KeyService {
     required bool isTrashingSecret,
   }) async {
     try {
+      // Derive two keys from the password and salt using Argon2
       final derivatedKeys = Argon2.computeTwoKeysFromPassword(
         password: password,
         salt: salt,
@@ -183,15 +196,18 @@ class KeyService {
       var endpoint = '/fetch';
       if (isTrashingSecret) endpoint = '/trash';
 
+      // Encrypts the whole request body
       final response = await _postEncryptedBody(endpoint, {
         'identifier': backupId,
         'authentication_key': HEX.encode(authenticationKey),
       });
 
+      // /fetch should returns 200 while /trash should returns 202
       if (response.statusCode != 200 && response.statusCode != 202) {
         throw KeyServiceException.fromResponse(response);
       }
 
+      // Deserialize the SignedResponse
       final signedResponse = response.data;
       final signature = signedResponse['signature'] as String;
       final payloadString = signedResponse['response'] as String;
@@ -204,6 +220,7 @@ class KeyService {
         signature: signature,
       );
 
+      // Decrypts the response
       final decryptedResponse = await Nip44.decrypt(
         payload: payloadString,
         recipientSecretKey: _keys.secret,
@@ -219,6 +236,7 @@ class KeyService {
       final nonce = encryption.nonce;
       final ciphertext = encryption.ciphertext;
 
+      // Decrypts the encrypted backup key using the encryption key derived from user password and salt
       final backupKey = EncryptionService.decrypt(
         key: encryptionKey,
         ciphertext: ciphertext,
