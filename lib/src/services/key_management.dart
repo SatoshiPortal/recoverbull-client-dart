@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:dio/dio.dart';
+import 'package:http/http.dart' as http;
 import 'package:hex/hex.dart';
 import 'package:nostr/nostr.dart';
 import 'package:recoverbull/recoverbull.dart';
@@ -16,7 +16,6 @@ import 'package:recoverbull/src/services/encryption.dart';
 class KeyService {
   final Uri keyServer;
   final String keyServerPublicKey;
-  late Dio _client;
   late Keys _keys;
 
   // constructor
@@ -25,7 +24,6 @@ class KeyService {
     required this.keyServerPublicKey,
   }) {
     _keys = Keys.generate();
-    _client = Dio(BaseOptions(headers: {'Content-Type': 'application/json'}));
   }
 
   /// serverInfo can be useful to check if the server is running and get infos such as
@@ -33,10 +31,19 @@ class KeyService {
   /// - canary
   /// - signature
   Future<Info> serverInfo() async {
-    final response = await _client.get('$keyServer/info');
+    try {
+      final uri = keyServer.replace(path: '/info');
 
-    if (response.statusCode == 200) {
-      final signedResponse = response.data;
+      final response = await http.get(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode != 200) {
+        throw KeyServiceException.fromResponse(response);
+      }
+
+      final signedResponse = json.decode(utf8.decode(response.bodyBytes));
       final signature = signedResponse['signature'] as String;
       final payloadString = signedResponse['response'] as String;
       final payloadBytes = utf8.encode(payloadString);
@@ -53,9 +60,10 @@ class KeyService {
       checkTimestamp(timestamp: payload.timestamp);
 
       return info;
+    } catch (e) {
+      if (e is http.Response) throw KeyServiceException.fromResponse(e);
+      throw KeyServiceException(message: e.toString());
     }
-
-    throw KeyServiceException.fromResponse(response);
   }
 
   /// Stores an encryptedBackupKey backup key on the remote key-server.
@@ -109,10 +117,9 @@ class KeyService {
       });
 
       if (response.statusCode == 201) return;
-
-      throw KeyServiceException.fromResponse(response);
     } catch (e) {
-      rethrow;
+      if (e is http.Response) throw KeyServiceException.fromResponse(e);
+      throw KeyServiceException(message: e.toString());
     }
   }
 
@@ -154,7 +161,7 @@ class KeyService {
     );
   }
 
-  Future<Response> _postEncryptedBody(
+  Future<http.Response> _postEncryptedBody(
     String endpoint,
     Map<String, dynamic> body,
   ) async {
@@ -164,10 +171,16 @@ class KeyService {
       recipientPublicKey: keyServerPublicKey,
     );
 
-    return await _client.post('$keyServer$endpoint', data: {
-      'public_key': _keys.public,
-      'encrypted_body': encryptedBody,
-    });
+    final uri = keyServer.replace(path: endpoint);
+
+    return await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'public_key': _keys.public,
+        'encrypted_body': encryptedBody,
+      }),
+    );
   }
 
   Future<List<int>> _fetchKey({
@@ -208,7 +221,7 @@ class KeyService {
       }
 
       // Deserialize the SignedResponse
-      final signedResponse = response.data;
+      final signedResponse = json.decode(utf8.decode(response.bodyBytes));
       final signature = signedResponse['signature'] as String;
       final payloadString = signedResponse['response'] as String;
       final payloadBytes = utf8.encode(payloadString);
@@ -242,10 +255,7 @@ class KeyService {
         ciphertext: ciphertext,
         nonce: nonce,
       );
-      if (backupKey.isNotEmpty && backupKey.length == 32) return backupKey;
-
-      throw KeyServiceException(
-          message: 'Invalid backup key format received from server');
+      return backupKey;
     } catch (e) {
       rethrow;
     }

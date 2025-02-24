@@ -1,4 +1,6 @@
-import 'package:dio/dio.dart';
+import 'dart:convert';
+
+import 'package:http/http.dart';
 
 /// Custom exception for encryption operations
 class EncryptionException implements Exception {
@@ -26,15 +28,34 @@ class BackupException implements Exception {
 
 /// Custom exception for key management operations
 class KeyServiceException implements Exception {
-  late int? code;
-  late String? message;
+  int? code;
+  String? message;
+  DateTime? requestedAt;
+  int? cooldownInMinutes;
 
-  KeyServiceException({this.code, this.message});
+  KeyServiceException({
+    this.code,
+    this.message,
+    this.requestedAt,
+    this.cooldownInMinutes,
+  });
 
-  KeyServiceException.fromResponse(Response<dynamic> response) {
-    KeyServiceException(
+  static KeyServiceException fromResponse(Response response) {
+    final body = json.decode(response.body);
+    final requestedAt = body['requested_at'] != null
+        ? DateTime.parse(body['requested_at'])
+        : null;
+    final cooldownInMinutes = body['cooldown'];
+
+    return KeyServiceException(
       code: response.statusCode,
-      message: response.data['error'],
+      message: body['error'],
+      requestedAt: requestedAt,
+      cooldownInMinutes: cooldownInMinutes,
     );
   }
+
+  @override
+  String toString() =>
+      'KeyServiceException(code: $code, message: $message, requestedAt: $requestedAt, cooldown: $cooldownInMinutes)';
 }

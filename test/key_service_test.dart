@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dotenv/dotenv.dart';
 import 'package:hex/hex.dart';
 import 'package:recoverbull/recoverbull.dart';
+import 'package:recoverbull/src/models/exceptions.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -97,5 +98,32 @@ void main() {
         throwsException,
       );
     });
+  });
+
+  test('store fail', () async {
+    try {
+      await keyService.fetchBackupKey(backupId: 'a', password: 'a', salt: []);
+    } on KeyServiceException catch (e) {
+      expect(e.message,
+          'identifier or authentication_key are not 256 bits HEX hashes');
+      return;
+    }
+    throw Exception("Expected failure");
+  });
+
+  test('fetch rate-limit', () async {
+    try {
+      await keyService.fetchBackupKey(
+        backupId: backup.id,
+        password: 'invalid',
+        salt: [],
+      );
+    } on KeyServiceException catch (e) {
+      expect(e.cooldownInMinutes, isNotNull);
+      expect(e.requestedAt, isNotNull);
+      expect(e.message, isNotEmpty);
+      return;
+    }
+    throw Exception("Expected failure");
   });
 }
