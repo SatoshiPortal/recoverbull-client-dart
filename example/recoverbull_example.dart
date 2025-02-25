@@ -11,16 +11,15 @@ void main() async {
   final secret =
       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 
-  final backupJson = BackupService.createBackup(
+  final backup = BackupService.createBackup(
     secret: utf8.encode(secret),
     backupKey: HEX.decode(backupKey),
   );
-  final backup = Backup.fromJson(backupJson);
 
   print('backup created: ${backup.id}');
 
   final secretRestored = BackupService.restoreBackup(
-    backup: backupJson,
+    backup: backup,
     backupKey: HEX.decode(backupKey),
   );
   print('secret restored: $secretRestored');

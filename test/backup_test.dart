@@ -11,11 +11,10 @@ void main() {
   final secret = utf8.encode(
       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about');
 
-  final backupJson = BackupService.createBackup(
+  final backup = BackupService.createBackup(
     secret: secret,
     backupKey: key,
   );
-  final backup = Backup.fromJson(backupJson);
   final encodedCiphertext = base64.decode(backup.ciphertext);
   final encrypted = EncryptionService.splitBytes(encodedCiphertext);
   final ciphertext = encrypted.ciphertext;
@@ -24,7 +23,7 @@ void main() {
 
   group('EncryptionService', () {
     test('create backup', () {
-      expect(backupJson, isNotEmpty);
+      expect(backup.toJson(), isNotEmpty);
     });
 
     test('test MAC', () {
@@ -39,35 +38,11 @@ void main() {
 
     test('restore', () {
       final restoredSecret = BackupService.restoreBackup(
-        backup: backupJson,
+        backup: backup,
         backupKey: key,
       );
 
       expect(utf8.encode(restoredSecret), secret);
     });
-
-    // test('restore', () {
-    //   final secret = utf8.encode('Super Secret!');
-    //   final mnemonic =
-    //       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
-    //   final derivationPath = "m/1999'/0'"; // this is an example path
-
-    //   final backupJson = BackupService.createBackupWithBIP85(
-    //     secret: secret,
-    //     mnemonic: mnemonic,
-    //     derivationPath: derivationPath,
-    //     language: 'english', // optional
-    //     network: 'mainnet', // optional
-    //   );
-
-    //   final restoredSecret = BackupService.restoreBackupFromBip85(
-    //     backup: backupJson,
-    //     mnemonic: mnemonic,
-    //     derivationPath: derivationPath,
-    //     language: 'english', // optional
-    //     network: 'mainnet', // optional
-    //   );
-    //   assert(utf8.encode(restoredSecret) == secret);
-    // });
   });
 }

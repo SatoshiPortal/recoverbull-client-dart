@@ -12,11 +12,10 @@ void main() {
   final secret = utf8.encode(
       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about');
 
-  final backupJson = BackupService.createBackup(
+  final backup = BackupService.createBackup(
     secret: secret,
     backupKey: backupKey,
   );
-  final backup = Backup.fromJson(backupJson);
 
   final env = DotEnv(includePlatformEnvironment: true)..load();
   final envSecretServer = env['SECRET_SERVER'];
