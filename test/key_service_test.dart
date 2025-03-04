@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:dotenv/dotenv.dart';
 import 'package:hex/hex.dart';
 import 'package:recoverbull/recoverbull.dart';
-import 'package:recoverbull/src/models/exceptions.dart';
 import 'package:test/test.dart';
 
 void main() {

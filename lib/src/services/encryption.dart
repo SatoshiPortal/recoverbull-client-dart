@@ -4,7 +4,6 @@ import 'dart:typed_data';
 
 import 'package:recoverbull/recoverbull.dart';
 import 'package:pointycastle/export.dart';
-import 'package:recoverbull/src/models/exceptions.dart';
 
 typedef Encryption = ({
   List<int> nonce,

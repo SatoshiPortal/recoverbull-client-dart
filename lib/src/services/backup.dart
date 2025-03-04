@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:hex/hex.dart';
 import 'package:recoverbull/recoverbull.dart';
-import 'package:recoverbull/src/models/exceptions.dart';
 import 'package:recoverbull/src/services/encryption.dart';
 
 /// BackupService helps you to create and restore bull backups

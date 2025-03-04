@@ -4,7 +4,6 @@ import 'package:http/http.dart' as http;
 import 'package:hex/hex.dart';
 import 'package:nostr/nostr.dart';
 import 'package:recoverbull/recoverbull.dart';
-import 'package:recoverbull/src/models/exceptions.dart';
 import 'package:recoverbull/src/models/info.dart';
 import 'package:recoverbull/src/models/payload.dart';
 import 'package:recoverbull/src/services/argon2.dart';
