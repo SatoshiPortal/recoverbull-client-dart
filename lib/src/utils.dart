@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:bip32/bip32.dart' as bip32;
 import 'package:bip39_mnemonic/bip39_mnemonic.dart' as bip39;
 import 'package:hex/hex.dart';
+import 'package:http/http.dart';
 import 'package:nostr/nostr.dart';
 import 'package:pointycastle/digests/sha256.dart';
 import 'package:recoverbull/src/models/exceptions.dart';
@@ -163,5 +165,34 @@ void checkTimestamp({required int timestamp}) {
       message:
           'Invalid timestamp: The provided timestamp is delayed by more than one minute. Please ensure your system clock is synchronized and try again.',
     );
+  }
+}
+
+Response parseHttpResponse(List<int> bytes) {
+  try {
+    final decoded = utf8.decode(bytes, allowMalformed: true);
+    final parts = decoded.split('\r\n\r\n');
+    if (parts.length < 2) throw Exception('Invalid HTTP response format');
+
+    final body = parts.sublist(1).join('\r\n\r\n');
+
+    final lines = parts[0].split('\r\n');
+    if (lines.isEmpty) {
+      throw Exception('Malformed HTTP response: Missing status line');
+    }
+
+    final statusParts = lines.first.split(' ');
+    if (statusParts.length < 3) {
+      throw Exception('Malformed HTTP status line: ${lines.first}');
+    }
+
+    final statusCode = int.tryParse(statusParts[1]);
+    if (statusCode == null) {
+      throw Exception('Malformed HTTP status code: ${statusParts[1]}');
+    }
+
+    return Response.bytes(utf8.encode(body), statusCode);
+  } catch (_) {
+    rethrow;
   }
 }

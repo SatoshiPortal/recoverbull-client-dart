@@ -13,6 +13,12 @@ dependencies:
       ref: main
 ```
 
+## Tests
+
+```sh
+flutter test
+```
+
 
 ## Examples
 

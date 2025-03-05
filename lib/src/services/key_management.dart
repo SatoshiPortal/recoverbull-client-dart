@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:hex/hex.dart';
@@ -8,6 +9,7 @@ import 'package:recoverbull/src/models/info.dart';
 import 'package:recoverbull/src/models/payload.dart';
 import 'package:recoverbull/src/services/argon2.dart';
 import 'package:recoverbull/src/services/encryption.dart';
+import 'package:tor/socks_socket.dart';
 
 /// The [KeyService] class provides functionalities to store and recover
 /// backup keys securely by interacting with a remote key server API. It handles
@@ -16,13 +18,58 @@ class KeyService {
   final Uri keyServer;
   final String keyServerPublicKey;
   late Keys _keys;
+  late Tor? _tor;
+  late int _torPort;
+  static const _headers = {'Content-Type': 'application/json'};
 
   // constructor
   KeyService({
     required this.keyServer,
     required this.keyServerPublicKey,
+    Tor? tor,
+    int? torPort,
   }) {
+    final tld = keyServer.host.split('.').last;
+    if (tor != null && tld != 'onion') {
+      throw KeyServiceException(message: 'use .onion URI with TOR');
+    }
+
     _keys = Keys.generate();
+    _tor = tor;
+    _torPort = torPort ?? 80;
+  }
+
+  static Future<KeyService> withTor({
+    required Uri keyServer,
+    required String keyServerPublicKey,
+    int? torPort,
+  }) async {
+    await Tor.init();
+    await Tor.instance.start(); // start the proxy
+    await Future.delayed(Duration(seconds: 5)); // extra time for TOR init
+
+    return KeyService(
+      keyServer: keyServer,
+      keyServerPublicKey: keyServerPublicKey,
+      tor: Tor.instance,
+      torPort: torPort,
+    );
+  }
+
+  bool get isTorWorking => _tor != null && _tor!.started ? true : false;
+
+  void killTor() async {
+    _tor?.stop();
+    _tor = null;
+  }
+
+  Future<SOCKSSocket> get _socks async {
+    final socks = await SOCKSSocket.create(
+      proxyHost: InternetAddress.loopbackIPv4.address,
+      proxyPort: Tor.instance.port,
+      sslEnabled: keyServer.scheme == 'https' ? true : false,
+    );
+    return socks;
   }
 
   /// serverInfo can be useful to check if the server is running and get infos such as
@@ -33,10 +80,19 @@ class KeyService {
     try {
       final uri = keyServer.replace(path: '/info');
 
-      final response = await http.get(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-      );
+      http.Response response;
+      if (_tor == null) {
+        response = await http.get(uri, headers: _headers);
+      } else {
+        response = await _torRequest(
+          socks: await _socks,
+          request: [
+            'GET ${uri.path} HTTP/1.1\r\n',
+            'Host: ${uri.host}\r\n',
+            '\r\n'
+          ].join(),
+        );
+      }
 
       if (response.statusCode != 200) {
         throw KeyServiceException.fromResponse(response);
@@ -108,14 +164,48 @@ class KeyService {
       final encryptedBackupKey =
           EncryptionService.mergeBytes(backupKeyEncryption);
 
-      // Encrypt the whole request body
-      final response = await _postEncryptedBody('/store', {
+      final body = json.encode({
         'identifier': backupId,
         'authentication_key': HEX.encode(authenticationKey),
         'encrypted_secret': base64.encode(encryptedBackupKey),
       });
 
-      if (response.statusCode == 201) return;
+      final bodyEncrypted = await Nip44.encrypt(
+        plaintext: body,
+        senderSecretKey: _keys.secret,
+        recipientPublicKey: keyServerPublicKey,
+      );
+
+      final bodyWrapped = json.encode({
+        'public_key': _keys.public,
+        'encrypted_body': bodyEncrypted,
+      });
+
+      const endpoint = '/store';
+      http.Response response;
+      if (_tor == null) {
+        response = await http.post(
+          keyServer.replace(path: endpoint),
+          headers: _headers,
+          body: bodyWrapped,
+        );
+      } else {
+        response = await _torRequest(
+          socks: await _socks,
+          request: [
+            'POST $endpoint HTTP/1.1',
+            'Host: ${keyServer.host}',
+            'Content-Type: application/json',
+            'Content-Length: ${bodyWrapped.length}',
+            '',
+            bodyWrapped
+          ].join('\r\n'),
+        );
+      }
+
+      if (response.statusCode != 201) {
+        throw KeyServiceException.fromResponse(response);
+      }
     } catch (e) {
       if (e is http.Response) throw KeyServiceException.fromResponse(e);
       throw KeyServiceException(message: e.toString());
@@ -160,28 +250,6 @@ class KeyService {
     );
   }
 
-  Future<http.Response> _postEncryptedBody(
-    String endpoint,
-    Map<String, dynamic> body,
-  ) async {
-    final encryptedBody = await Nip44.encrypt(
-      plaintext: json.encode(body),
-      senderSecretKey: _keys.secret,
-      recipientPublicKey: keyServerPublicKey,
-    );
-
-    final uri = keyServer.replace(path: endpoint);
-
-    return await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'public_key': _keys.public,
-        'encrypted_body': encryptedBody,
-      }),
-    );
-  }
-
   Future<List<int>> _fetchKey({
     required String backupId,
     required String password,
@@ -205,14 +273,45 @@ class KeyService {
       // encryption key will cipher the secret before storage on the key server.
       final encryptionKey = derivatedKeys.$2;
 
-      var endpoint = '/fetch';
-      if (isTrashingSecret) endpoint = '/trash';
-
-      // Encrypts the whole request body
-      final response = await _postEncryptedBody(endpoint, {
+      final body = json.encode({
         'identifier': backupId,
         'authentication_key': HEX.encode(authenticationKey),
       });
+
+      final bodyEncrypted = await Nip44.encrypt(
+        plaintext: body,
+        senderSecretKey: _keys.secret,
+        recipientPublicKey: keyServerPublicKey,
+      );
+
+      final bodyWrapped = json.encode({
+        'public_key': _keys.public,
+        'encrypted_body': bodyEncrypted,
+      });
+
+      var endpoint = '/fetch';
+      if (isTrashingSecret) endpoint = '/trash';
+
+      http.Response response;
+      if (_tor == null) {
+        response = await http.post(
+          keyServer.replace(path: endpoint),
+          headers: _headers,
+          body: bodyWrapped,
+        );
+      } else {
+        response = await _torRequest(
+          socks: await _socks,
+          request: [
+            'POST $endpoint HTTP/1.1',
+            'Host: ${keyServer.host}',
+            'Content-Type: application/json',
+            'Content-Length: ${bodyWrapped.length}',
+            '',
+            bodyWrapped
+          ].join('\r\n'),
+        );
+      }
 
       // /fetch should returns 200 while /trash should returns 202
       if (response.statusCode != 200 && response.statusCode != 202) {
@@ -254,9 +353,36 @@ class KeyService {
         ciphertext: ciphertext,
         nonce: nonce,
       );
+
       return backupKey;
     } catch (e) {
       rethrow;
+    }
+  }
+
+  Future<http.Response> _torRequest({
+    required SOCKSSocket socks,
+    required String request,
+  }) async {
+    try {
+      await socks.connect(); // Establish SOCKS connection
+      // Connect to target server
+      await socks.connectTo(keyServer.host, _torPort);
+
+      socks.write(request); // Send the request
+
+      final response = <int>[];
+
+      await for (var bytes in socks.inputStream) {
+        response.addAll(bytes);
+        break;
+      }
+
+      return parseHttpResponse(response); // deserialize bytes
+    } catch (e) {
+      rethrow;
+    } finally {
+      await socks.close();
     }
   }
 }
