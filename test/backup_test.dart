@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:hex/hex.dart';
 import 'package:recoverbull/recoverbull.dart';
 import 'package:recoverbull/src/services/encryption.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   final key = HEX.decode(

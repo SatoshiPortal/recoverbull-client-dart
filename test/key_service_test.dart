@@ -3,13 +3,16 @@ import 'dart:convert';
 import 'package:dotenv/dotenv.dart';
 import 'package:hex/hex.dart';
 import 'package:recoverbull/recoverbull.dart';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
-void main() {
+void main() async {
   final backupKey = HEX.decode(
       'fcb4a38e1d732dede321d13a6ffa024a38ecc4f40c88e9dcc3c9fe51fb942a6f');
   final secret = utf8.encode(
       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about');
+  final keyServerPublicKey =
+      '6a04ab98d9e4774ad806e302dddeb63bea16b5cb5f223ee77478e861bb583eb3';
+  final password = "PasswØrd";
 
   final backup = BackupService.createBackup(
     secret: secret,
@@ -22,12 +25,19 @@ void main() {
     throw Exception('please set SECRET_SERVER in a .env');
   }
 
-  final secretServer = Uri.parse(envSecretServer!);
-  final password = "PasswØrd";
+  final keyServerUri = Uri.parse(envSecretServer!);
+  // final tld = keyServerUri.host.split('.').last;
+  // Tor? tor;
+  // if (tld == 'onion') {
+  //   await Tor.init();
+  //   await Tor.instance.start(); // start the proxy
+  //   tor = Tor.instance;
+  // }
+
   final keyService = KeyService(
-    keyServer: secretServer,
-    keyServerPublicKey:
-        '6a04ab98d9e4774ad806e302dddeb63bea16b5cb5f223ee77478e861bb583eb3',
+    keyServer: keyServerUri,
+    keyServerPublicKey: keyServerPublicKey,
+    // tor: tor,
   );
 
   group('KeyService', () {
