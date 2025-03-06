@@ -95,6 +95,14 @@ class KeyService {
       final info = Info.fromMap(json.decode(payload.data));
       checkTimestamp(timestamp: payload.timestamp);
 
+      // check warrant canary
+      const canary = '🐦';
+      if (info.canary != canary) {
+        throw KeyServiceException(
+            message:
+                'Warrant Canary: $canary is missing. This may indicate a compromise or inability to confirm the canary\'s integrity.');
+      }
+
       return info;
     } catch (e) {
       if (e is http.Response) throw KeyServiceException.fromResponse(e);
