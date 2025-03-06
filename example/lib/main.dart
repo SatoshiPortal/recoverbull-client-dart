@@ -14,101 +14,111 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(home: TorExample());
+    return MaterialApp(home: Example());
   }
 }
 
-class TorExample extends StatefulWidget {
-  const TorExample({super.key});
+class Example extends StatefulWidget {
+  const Example({super.key});
 
   @override
-  State<TorExample> createState() => _TorExampleState();
+  State<Example> createState() => _ExampleState();
 }
 
 final secret =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 final password = "PasswØrd";
 final _backupKey =
+    'fcb4a38e1d732dede321d13a6ffa024a38ecc4f40c88e9dcc3c9fe51fb942a6f';
+final _keyServerPublicKey =
     '6a04ab98d9e4774ad806e302dddeb63bea16b5cb5f223ee77478e861bb583eb3';
 
-class _TorExampleState extends State<TorExample> {
+class _ExampleState extends State<Example> {
   String log = "";
   KeyService? _keyService;
+  Tor? _tor;
   bool _torLoading = false;
   bool _stored = false;
   bool _trashed = false;
   String _backupId = '';
   String _salt = '';
   final _keyServerUrl = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("RecoverBull with Tor")),
+      appBar: AppBar(title: Text("RecoverBull")),
       body: Padding(
         padding: EdgeInsets.all(16),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _keyServerUrl,
-                decoration: InputDecoration(hintText: 'http://something.onion'),
-                validator: (value) {
-                  if (value == null) return 'Fill with an onion address';
-                  try {
-                    Uri.parse(value);
-                    return null;
-                  } catch (e) {
-                    return 'is not an URI';
-                  }
-                },
-              ),
-              ListTile(leading: Text('secret'), title: Text(secret)),
-              ListTile(leading: Text('password'), title: Text(password)),
-              ListTile(leading: Text('backupKey'), title: Text(_backupKey)),
-              ListTile(leading: Text('salt'), title: Text(_salt)),
-              Wrap(
-                children: [
-                  ElevatedButton(
-                      onPressed: _keyService == null ? startTor : null,
-                      child: _torLoading
-                          ? CircularProgressIndicator()
-                          : Text('Start')),
-                  ElevatedButton(
-                      onPressed:
-                          _keyService != null && _keyService!.isTorWorking
-                              ? stopTor
-                              : null,
-                      child: Text('Stop')),
-                  ElevatedButton(
-                      onPressed: _keyService != null ? getInfo : null,
-                      child: Text('Server Info')),
-                  ElevatedButton(
-                      onPressed: _keyService != null ? storeBackup : null,
-                      child: Text('Store Key')),
-                  ElevatedButton(
-                      onPressed: _keyService != null && _stored && !_trashed
-                          ? fetchBackupKey
-                          : null,
-                      child: Text('Fetch Key')),
-                  ElevatedButton(
-                      onPressed: _keyService != null && _stored && !_trashed
-                          ? trashBackupKey
-                          : null,
-                      child: Text('Trash Key')),
-                ],
-              ),
-              Card(
-                color: Colors.black,
-                child: SizedBox(
-                  width: double.infinity,
-                  child: SelectableText(
-                    log,
-                    style: TextStyle(color: Colors.green),
-                  ),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _keyServerUrl,
+                  decoration:
+                      InputDecoration(hintText: 'http://something.onion'),
+                  validator: (value) {
+                    if (value == null) return 'Fill the key server address';
+                    if (value.isEmpty) return 'Fill the key server address';
+
+                    try {
+                      Uri.parse(value);
+                      return null;
+                    } catch (e) {
+                      return 'is not an URI';
+                    }
+                  },
                 ),
-              )
-            ],
+                ListTile(leading: Text('secret'), title: Text(secret)),
+                ListTile(leading: Text('password'), title: Text(password)),
+                ListTile(leading: Text('backupKey'), title: Text(_backupKey)),
+                ListTile(leading: Text('salt'), title: Text(_salt)),
+                Wrap(
+                  children: [
+                    ElevatedButton(
+                        onPressed: _keyService == null ? startTor : null,
+                        child: _torLoading
+                            ? CircularProgressIndicator()
+                            : Text('Start')),
+                    ElevatedButton(
+                        onPressed: _keyService != null ? stopTor : null,
+                        child: Text('Reset')),
+                    ElevatedButton(
+                        onPressed: _keyService != null ? getInfo : null,
+                        child: Text('Server Info')),
+                    ElevatedButton(
+                        onPressed: _keyService != null ? storeBackup : null,
+                        child: Text('Store Key')),
+                    ElevatedButton(
+                        onPressed: _keyService != null && _stored && !_trashed
+                            ? fetchBackupKey
+                            : null,
+                        child: Text('Fetch Key')),
+                    ElevatedButton(
+                        onPressed: _keyService != null && _stored && !_trashed
+                            ? trashBackupKey
+                            : null,
+                        child: Text('Trash Key')),
+                    ElevatedButton(
+                        onPressed: _keyService != null ? recoverbull : null,
+                        child: Text('RecoverBull')),
+                  ],
+                ),
+                Card(
+                  color: Colors.black,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: SelectableText(
+                      log,
+                      style: TextStyle(color: Colors.green),
+                    ),
+                  ),
+                )
+              ],
+            ),
           ),
         ),
       ),
@@ -116,24 +126,33 @@ class _TorExampleState extends State<TorExample> {
   }
 
   void startTor() async {
-    _torLoading = true;
-    log += '\nStarting TOR…';
-    setState(() {});
+    if (!_formKey.currentState!.validate()) return;
 
-    // Configure SOCKS5 Proxy for Tor
-    final keyServer = Uri.parse(_keyServerUrl.text);
-    final keyServerPublicKey =
-        '6a04ab98d9e4774ad806e302dddeb63bea16b5cb5f223ee77478e861bb583eb3';
-    _keyService = await KeyService.withTor(
-      keyServer: keyServer,
-      keyServerPublicKey: keyServerPublicKey,
+    final keyServerUri = Uri.parse(_keyServerUrl.text);
+
+    final tld = keyServerUri.host.split('.').last;
+    if (tld == 'onion') {
+      _torLoading = true;
+      log += '\nStarting TOR…';
+      setState(() {});
+
+      await Tor.init();
+      await Tor.instance.start(); // start the proxy
+      _tor = Tor.instance;
+    }
+
+    _keyService = KeyService(
+      keyServer: keyServerUri,
+      keyServerPublicKey: _keyServerPublicKey,
+      tor: _tor, // null if not onion link
     );
+
     _torLoading = false;
     setState(() => log += '\nKeyService initialized');
   }
 
   void stopTor() {
-    _keyService?.killTor();
+    _keyService?.dispose();
     log = '';
     _keyService = null;
     setState(() {});
@@ -146,7 +165,6 @@ class _TorExampleState extends State<TorExample> {
       final info = await _keyService!.serverInfo();
       setState(() => log += '\ninfo: ${info.canary}');
     } catch (e) {
-      print(e);
       setState(() => log += '\nError: $e');
     }
   }
@@ -182,7 +200,7 @@ class _TorExampleState extends State<TorExample> {
         password.isEmpty ||
         _salt.isEmpty ||
         _keyService == null) {
-      print('missing parameters');
+      setState(() => log += '\nmissing params');
       return;
     }
 
@@ -200,7 +218,7 @@ class _TorExampleState extends State<TorExample> {
         password.isEmpty ||
         _salt.isEmpty ||
         _keyService == null) {
-      print('missing parameters');
+      setState(() => log += '\nmissing params');
       return;
     }
 
@@ -212,5 +230,45 @@ class _TorExampleState extends State<TorExample> {
 
     _trashed = true;
     setState(() => log += '\ntrash key: ${HEX.encode(backupKey)} ');
+  }
+
+  recoverbull() async {
+    if (_keyService == null) return;
+
+    setState(() => log = '');
+
+    final backup = BackupService.createBackup(
+      secret: utf8.encode(secret),
+      backupKey: HEX.decode(_backupKey),
+    );
+    setState(() => log += '\nbackup created: ${backup.id}');
+
+    final secretRestored = BackupService.restoreBackup(
+      backup: backup,
+      backupKey: HEX.decode(_backupKey),
+    );
+    setState(() => log += '\nsecret restored: $secretRestored');
+
+    final info = await _keyService!.serverInfo();
+    setState(() => log += '\ninfo.cooldown: ${info.cooldown}');
+    setState(() => log += '\ninfo.canary: ${info.canary}');
+    setState(() => log += '\ninfo.secretMaxLength: ${info.secretMaxLength}');
+
+    await _keyService!.storeBackupKey(
+      backupId: backup.id,
+      password: password,
+      backupKey: HEX.decode(_backupKey),
+      salt: HEX.decode(backup.salt),
+    );
+    setState(() => log += '\nbackup key stored encrypted on the server');
+
+    final backupKeyBytes = await _keyService!.fetchBackupKey(
+      backupId: backup.id,
+      password: password,
+      salt: HEX.decode(backup.salt),
+    );
+    final backupKeyRecovered = HEX.encode(backupKeyBytes);
+    setState(() =>
+        log += '\nbackup key recovered: $backupKeyRecovered from the server');
   }
 }
