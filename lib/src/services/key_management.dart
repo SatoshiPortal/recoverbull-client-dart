@@ -30,7 +30,7 @@ class KeyService {
     int? torPort,
   }) {
     final tld = keyServer.host.split('.').last;
-    if (tor != null && tld != 'onion') {
+    if ((tor == null && tld == 'onion') || (tor != null && tld != 'onion')) {
       throw KeyServiceException(message: 'use .onion URI with TOR');
     }
 
@@ -39,26 +39,7 @@ class KeyService {
     _torPort = torPort ?? 80;
   }
 
-  static Future<KeyService> withTor({
-    required Uri keyServer,
-    required String keyServerPublicKey,
-    int? torPort,
-  }) async {
-    await Tor.init();
-    await Tor.instance.start(); // start the proxy
-    await Future.delayed(Duration(seconds: 5)); // extra time for TOR init
-
-    return KeyService(
-      keyServer: keyServer,
-      keyServerPublicKey: keyServerPublicKey,
-      tor: Tor.instance,
-      torPort: torPort,
-    );
-  }
-
-  bool get isTorWorking => _tor != null && _tor!.started ? true : false;
-
-  void killTor() async {
+  void dispose() async {
     _tor?.stop();
     _tor = null;
   }
