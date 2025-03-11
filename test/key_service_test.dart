@@ -10,8 +10,6 @@ void main() async {
       'fcb4a38e1d732dede321d13a6ffa024a38ecc4f40c88e9dcc3c9fe51fb942a6f');
   final secret = utf8.encode(
       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about');
-  final keyServerPublicKey =
-      '6a04ab98d9e4774ad806e302dddeb63bea16b5cb5f223ee77478e861bb583eb3';
   final password = "PasswØrd";
 
   final backup = BackupService.createBackup(
@@ -34,11 +32,7 @@ void main() async {
   //   tor = Tor.instance;
   // }
 
-  final keyService = KeyService(
-    keyServer: keyServerUri,
-    keyServerPublicKey: keyServerPublicKey,
-    // tor: tor,
-  );
+  final keyService = KeyService(keyServer: keyServerUri); // tor: tor,
 
   group('KeyService', () {
     test('info', () async {

@@ -30,8 +30,6 @@ final secret =
 final password = "PasswØrd";
 final _backupKey =
     'fcb4a38e1d732dede321d13a6ffa024a38ecc4f40c88e9dcc3c9fe51fb942a6f';
-final _keyServerPublicKey =
-    '6a04ab98d9e4774ad806e302dddeb63bea16b5cb5f223ee77478e861bb583eb3';
 
 class _ExampleState extends State<Example> {
   String log = "";
@@ -143,7 +141,6 @@ class _ExampleState extends State<Example> {
 
     _keyService = KeyService(
       keyServer: keyServerUri,
-      keyServerPublicKey: _keyServerPublicKey,
       tor: _tor, // null if not onion link
     );
 

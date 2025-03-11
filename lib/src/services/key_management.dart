@@ -3,10 +3,8 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:hex/hex.dart';
-import 'package:nostr/nostr.dart';
 import 'package:recoverbull/recoverbull.dart';
 import 'package:recoverbull/src/models/info.dart';
-import 'package:recoverbull/src/models/payload.dart';
 import 'package:recoverbull/src/services/argon2.dart';
 import 'package:recoverbull/src/services/encryption.dart';
 import 'package:tor/socks_socket.dart';
@@ -16,8 +14,7 @@ import 'package:tor/socks_socket.dart';
 /// key derivation, encryption, and communication with the server.
 class KeyService {
   final Uri keyServer;
-  final String keyServerPublicKey;
-  late Keys _keys;
+
   late Tor? _tor;
   late int _torPort;
   static const _headers = {'Content-Type': 'application/json'};
@@ -25,7 +22,6 @@ class KeyService {
   // constructor
   KeyService({
     required this.keyServer,
-    required this.keyServerPublicKey,
     Tor? tor,
     int? torPort,
   }) {
@@ -33,8 +29,6 @@ class KeyService {
     if ((tor == null && tld == 'onion') || (tor != null && tld != 'onion')) {
       throw KeyServiceException(message: 'use .onion URI with TOR');
     }
-
-    _keys = Keys.generate();
     _tor = tor;
     _torPort = torPort ?? 80;
   }
@@ -79,21 +73,8 @@ class KeyService {
         throw KeyServiceException.fromResponse(response);
       }
 
-      final signedResponse = json.decode(utf8.decode(response.bodyBytes));
-      final signature = signedResponse['signature'] as String;
-      final payloadString = signedResponse['response'] as String;
-      final payloadBytes = utf8.encode(payloadString);
-      final hashedPayload = sha256(payloadBytes);
-
-      checkSignature(
-        pubkey: keyServerPublicKey,
-        message: HEX.encode(hashedPayload),
-        signature: signature,
-      );
-
-      final payload = Payload.fromMap(json.decode(payloadString));
-      final info = Info.fromMap(json.decode(payload.data));
-      checkTimestamp(timestamp: payload.timestamp);
+      final responseJson = json.decode(utf8.decode(response.bodyBytes));
+      final info = Info.fromMap(responseJson);
 
       // check warrant canary
       const canary = '🐦';
@@ -159,24 +140,13 @@ class KeyService {
         'encrypted_secret': base64.encode(encryptedBackupKey),
       });
 
-      final bodyEncrypted = await Nip44.encrypt(
-        plaintext: body,
-        senderSecretKey: _keys.secret,
-        recipientPublicKey: keyServerPublicKey,
-      );
-
-      final bodyWrapped = json.encode({
-        'public_key': _keys.public,
-        'encrypted_body': bodyEncrypted,
-      });
-
       const endpoint = '/store';
       http.Response response;
       if (_tor == null) {
         response = await http.post(
           keyServer.replace(path: endpoint),
           headers: _headers,
-          body: bodyWrapped,
+          body: body,
         );
       } else {
         response = await _torRequest(
@@ -185,9 +155,9 @@ class KeyService {
             'POST $endpoint HTTP/1.1',
             'Host: ${keyServer.host}',
             'Content-Type: application/json',
-            'Content-Length: ${bodyWrapped.length}',
+            'Content-Length: ${body.length}',
             '',
-            bodyWrapped
+            body
           ].join('\r\n'),
         );
       }
@@ -267,17 +237,6 @@ class KeyService {
         'authentication_key': HEX.encode(authenticationKey),
       });
 
-      final bodyEncrypted = await Nip44.encrypt(
-        plaintext: body,
-        senderSecretKey: _keys.secret,
-        recipientPublicKey: keyServerPublicKey,
-      );
-
-      final bodyWrapped = json.encode({
-        'public_key': _keys.public,
-        'encrypted_body': bodyEncrypted,
-      });
-
       var endpoint = '/fetch';
       if (isTrashingSecret) endpoint = '/trash';
 
@@ -286,7 +245,7 @@ class KeyService {
         response = await http.post(
           keyServer.replace(path: endpoint),
           headers: _headers,
-          body: bodyWrapped,
+          body: body,
         );
       } else {
         response = await _torRequest(
@@ -295,9 +254,9 @@ class KeyService {
             'POST $endpoint HTTP/1.1',
             'Host: ${keyServer.host}',
             'Content-Type: application/json',
-            'Content-Length: ${bodyWrapped.length}',
+            'Content-Length: ${body.length}',
             '',
-            bodyWrapped
+            body
           ].join('\r\n'),
         );
       }
@@ -307,30 +266,7 @@ class KeyService {
         throw KeyServiceException.fromResponse(response);
       }
 
-      // Deserialize the SignedResponse
-      final signedResponse = json.decode(utf8.decode(response.bodyBytes));
-      final signature = signedResponse['signature'] as String;
-      final payloadString = signedResponse['response'] as String;
-      final payloadBytes = utf8.encode(payloadString);
-      final hashedPayload = sha256(payloadBytes);
-
-      checkSignature(
-        pubkey: keyServerPublicKey,
-        message: HEX.encode(hashedPayload),
-        signature: signature,
-      );
-
-      // Decrypts the response
-      final decryptedResponse = await Nip44.decrypt(
-        payload: payloadString,
-        recipientSecretKey: _keys.secret,
-        senderPublicKey: keyServerPublicKey,
-      );
-
-      final payload = Payload.fromMap(json.decode(decryptedResponse));
-      checkTimestamp(timestamp: payload.timestamp);
-
-      final data = json.decode(payload.data);
+      final data = json.decode(utf8.decode(response.bodyBytes));
       final encryptedBackupKey = base64.decode(data['encrypted_secret']);
       final encryption = EncryptionService.splitBytes(encryptedBackupKey);
       final nonce = encryption.nonce;
