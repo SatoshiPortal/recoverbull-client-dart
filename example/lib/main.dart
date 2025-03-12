@@ -38,9 +38,9 @@ class _ExampleState extends State<Example> {
   bool _torLoading = false;
   bool _stored = false;
   bool _trashed = false;
-  String _backupId = '';
-  String _salt = '';
-  final _keyServerUrl = TextEditingController();
+  List<int> _backupId = [];
+  List<int> _salt = [];
+  final _keyServerUrl = TextEditingController(text: 'http://localhost:3000');
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -73,7 +73,7 @@ class _ExampleState extends State<Example> {
                 ListTile(leading: Text('secret'), title: Text(secret)),
                 ListTile(leading: Text('password'), title: Text(password)),
                 ListTile(leading: Text('backupKey'), title: Text(_backupKey)),
-                ListTile(leading: Text('salt'), title: Text(_salt)),
+                ListTile(leading: Text('salt'), title: Text(HEX.encode(_salt))),
                 Wrap(
                   children: [
                     ElevatedButton(
@@ -177,9 +177,9 @@ class _ExampleState extends State<Example> {
 
       await _keyService?.storeBackupKey(
         backupId: backup.id,
-        password: password,
+        password: utf8.encode(password),
         backupKey: HEX.decode(_backupKey),
-        salt: HEX.decode(backup.salt),
+        salt: backup.salt,
       );
 
       _backupId = backup.id;
@@ -203,8 +203,8 @@ class _ExampleState extends State<Example> {
 
     final backupKey = await _keyService!.fetchBackupKey(
       backupId: _backupId,
-      password: password,
-      salt: HEX.decode(_salt),
+      password: utf8.encode(password),
+      salt: _salt,
     );
 
     setState(() => log += '\nfetch key: ${HEX.encode(backupKey)} ');
@@ -221,8 +221,8 @@ class _ExampleState extends State<Example> {
 
     final backupKey = await _keyService!.trashBackupKey(
       backupId: _backupId,
-      password: password,
-      salt: HEX.decode(_salt),
+      password: utf8.encode(password),
+      salt: _salt,
     );
 
     _trashed = true;
@@ -238,13 +238,13 @@ class _ExampleState extends State<Example> {
       secret: utf8.encode(secret),
       backupKey: HEX.decode(_backupKey),
     );
-    setState(() => log += '\nbackup created: ${backup.id}');
+    setState(() => log += '\nbackup created: ${HEX.encode(backup.id)}');
 
     final secretRestored = BackupService.restoreBackup(
       backup: backup,
       backupKey: HEX.decode(_backupKey),
     );
-    setState(() => log += '\nsecret restored: $secretRestored');
+    setState(() => log += '\nsecret restored: ${utf8.decode(secretRestored)}');
 
     final info = await _keyService!.serverInfo();
     setState(() => log += '\ninfo.cooldown: ${info.cooldown}');
@@ -253,16 +253,16 @@ class _ExampleState extends State<Example> {
 
     await _keyService!.storeBackupKey(
       backupId: backup.id,
-      password: password,
+      password: utf8.encode(password),
       backupKey: HEX.decode(_backupKey),
-      salt: HEX.decode(backup.salt),
+      salt: backup.salt,
     );
     setState(() => log += '\nbackup key stored encrypted on the server');
 
     final backupKeyBytes = await _keyService!.fetchBackupKey(
       backupId: backup.id,
-      password: password,
-      salt: HEX.decode(backup.salt),
+      password: utf8.encode(password),
+      salt: backup.salt,
     );
     final backupKeyRecovered = HEX.encode(backupKeyBytes);
     setState(() =>

@@ -36,10 +36,10 @@ class BackupService {
 
       // Create and encode backup
       final backup = BullBackup(
-        id: HEX.encode(generateRandomBytes(length: 32)),
+        id: generateRandomBytes(length: 32),
         createdAt: createdAt.millisecondsSinceEpoch,
-        ciphertext: base64.encode(encryptionEncoded),
-        salt: HEX.encode(generateRandomBytes(length: 16)),
+        ciphertext: encryptionEncoded,
+        salt: generateRandomBytes(length: 16),
       );
 
       return backup;
@@ -54,14 +54,14 @@ class BackupService {
   /// Parameters:
   /// - `backup` JSON string encoding the encrypted backup
   /// - `backupkey` encryption key to decrypt the backup
-  static String restoreBackup({
+  static List<int> restoreBackup({
     required BullBackup backup,
     required List<int> backupKey,
   }) {
     try {
       Encryption encryption;
       try {
-        final ciphertextBytes = base64.decode(backup.ciphertext);
+        final ciphertextBytes = backup.ciphertext;
         encryption = EncryptionService.splitBytes(ciphertextBytes);
       } catch (e) {
         throw BackupException('Invalid encrypted data format: ${e.toString()}');
@@ -75,8 +75,7 @@ class BackupService {
       );
 
       try {
-        final plaintext = utf8.decode(plaintextBytes);
-        return plaintext;
+        return plaintextBytes;
       } catch (e) {
         throw BackupException('Data is not valid UTF-8: ${e.toString()}');
       }

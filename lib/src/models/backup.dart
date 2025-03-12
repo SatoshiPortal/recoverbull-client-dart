@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:hex/hex.dart';
 import 'package:recoverbull/src/models/exceptions.dart';
 
 // Represents data associated with an encrypted backup.
@@ -9,13 +10,13 @@ class BullBackup {
   final int createdAt;
 
   /// Hex encoded Unique identifier for the backup
-  final String id;
+  final List<int> id;
 
   /// Base64 encoded nonce + ciphertext + HMac
-  final String ciphertext;
+  final List<int> ciphertext;
 
   /// Hex encoded salt may be used for password key derivation (Argon2)
-  final String salt;
+  final List<int> salt;
 
   /// Can be used to store the BIP85 derivation path of the backup key
   final String? path;
@@ -32,9 +33,9 @@ class BullBackup {
   factory BullBackup.fromMap(Map<String, dynamic> map) {
     return BullBackup(
       createdAt: (map['created_at'] as num).toInt(),
-      id: map['id'] as String,
-      ciphertext: map['ciphertext'] as String,
-      salt: map['salt'] as String,
+      id: HEX.decode(map['id'] as String),
+      ciphertext: base64.decode(map['ciphertext'] as String),
+      salt: HEX.decode(map['salt'] as String),
       path: map['path'] as String?,
     );
   }
@@ -52,9 +53,9 @@ class BullBackup {
   Map<String, dynamic> toMap() {
     return {
       'created_at': createdAt,
-      'id': id,
-      'ciphertext': ciphertext,
-      'salt': salt,
+      'id': HEX.encode(id),
+      'ciphertext': base64.encode(ciphertext),
+      'salt': HEX.encode(salt),
       'path': path,
     };
   }

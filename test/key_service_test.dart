@@ -10,7 +10,7 @@ void main() async {
       'fcb4a38e1d732dede321d13a6ffa024a38ecc4f40c88e9dcc3c9fe51fb942a6f');
   final secret = utf8.encode(
       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about');
-  final password = "PasswØrd";
+  final password = utf8.encode("PasswØrd");
 
   final backup = BackupService.createBackup(
     secret: secret,
@@ -51,43 +51,43 @@ void main() async {
                 backupId: backup.id,
                 password: password,
                 backupKey: backupKey,
-                salt: HEX.decode(backup.salt),
+                salt: backup.salt,
               ),
           returnsNormally);
     });
 
     test('fetch', () async {
-      final backupIdForFetchTest = HEX.encode(generateRandomBytes(length: 32));
+      final backupIdForFetchTest = generateRandomBytes(length: 32);
 
       await keyService.storeBackupKey(
         backupId: backupIdForFetchTest,
         password: password,
         backupKey: backupKey,
-        salt: HEX.decode(backup.salt),
+        salt: backup.salt,
       );
 
       final backupKeyRecovered = await keyService.fetchBackupKey(
         backupId: backupIdForFetchTest,
         password: password,
-        salt: HEX.decode(backup.salt),
+        salt: backup.salt,
       );
       expect(backupKey, backupKeyRecovered);
     });
 
     test('trash', () async {
-      final backupIdForTrashTest = HEX.encode(generateRandomBytes(length: 32));
+      final backupIdForTrashTest = generateRandomBytes(length: 32);
 
       await keyService.storeBackupKey(
         backupId: backupIdForTrashTest,
         password: password,
         backupKey: backupKey,
-        salt: HEX.decode(backup.salt),
+        salt: backup.salt,
       );
 
       final trashedBackupKey = await keyService.trashBackupKey(
         backupId: backupIdForTrashTest,
         password: password,
-        salt: HEX.decode(backup.salt),
+        salt: backup.salt,
       );
       expect(backupKey, trashedBackupKey);
 
@@ -95,7 +95,7 @@ void main() async {
         () async => await keyService.fetchBackupKey(
           backupId: backupIdForTrashTest,
           password: password,
-          salt: HEX.decode(backup.salt),
+          salt: backup.salt,
         ),
         throwsException,
       );
@@ -104,7 +104,11 @@ void main() async {
 
   test('store fail', () async {
     try {
-      await keyService.fetchBackupKey(backupId: 'a', password: 'a', salt: []);
+      await keyService.fetchBackupKey(
+        backupId: HEX.decode('a'),
+        password: utf8.encode('a'),
+        salt: [],
+      );
     } on KeyServiceException catch (e) {
       expect(e.message,
           'identifier or authentication_key are not 256 bits HEX hashes');
@@ -117,7 +121,7 @@ void main() async {
     try {
       await keyService.fetchBackupKey(
         backupId: backup.id,
-        password: 'invalid',
+        password: utf8.encode('invalid'),
         salt: [],
       );
     } on KeyServiceException catch (e) {

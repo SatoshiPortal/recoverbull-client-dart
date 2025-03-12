@@ -15,7 +15,7 @@ void main() {
     secret: secret,
     backupKey: key,
   );
-  final encodedCiphertext = base64.decode(backup.ciphertext);
+  final encodedCiphertext = backup.ciphertext;
   final encrypted = EncryptionService.splitBytes(encodedCiphertext);
   final ciphertext = encrypted.ciphertext;
   final nonce = encrypted.nonce;
@@ -42,7 +42,7 @@ void main() {
         backupKey: key,
       );
 
-      expect(utf8.encode(restoredSecret), secret);
+      expect(restoredSecret, secret);
     });
   });
 }

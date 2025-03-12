@@ -99,8 +99,8 @@ class KeyService {
   /// - `backupKey`: The bytes of the backup key
   /// - `salt`: The bytes of the salt used in key derivation.
   Future<void> storeBackupKey({
-    required String backupId,
-    required String password,
+    required List<int> backupId,
+    required List<int> password,
     required List<int> backupKey,
     required List<int> salt,
   }) async {
@@ -113,7 +113,7 @@ class KeyService {
 
       // Derive two keys from the password and salt using Argon2
       final derivatedKeys = Argon2.computeTwoKeysFromPassword(
-        password: password,
+        password: utf8.decode(password),
         salt: salt,
         length: 32,
       );
@@ -135,7 +135,7 @@ class KeyService {
           EncryptionService.mergeBytes(backupKeyEncryption);
 
       final body = json.encode({
-        'identifier': backupId,
+        'identifier': HEX.encode(backupId),
         'authentication_key': HEX.encode(authenticationKey),
         'encrypted_secret': base64.encode(encryptedBackupKey),
       });
@@ -178,8 +178,8 @@ class KeyService {
   /// - `password`: The password used for key derivation.
   /// - `salt`: The bytes of the salt used in key derivation.
   Future<List<int>> fetchBackupKey({
-    required String backupId,
-    required String password,
+    required List<int> backupId,
+    required List<int> password,
     required List<int> salt,
   }) async {
     return _fetchKey(
@@ -197,8 +197,8 @@ class KeyService {
   /// - `password`: The password used for key derivation.
   /// - `salt`: The bytes of the salt used in key derivation.
   Future<List<int>> trashBackupKey({
-    required String backupId,
-    required String password,
+    required List<int> backupId,
+    required List<int> password,
     required List<int> salt,
   }) async {
     return _fetchKey(
@@ -210,15 +210,15 @@ class KeyService {
   }
 
   Future<List<int>> _fetchKey({
-    required String backupId,
-    required String password,
+    required List<int> backupId,
+    required List<int> password,
     required List<int> salt,
     required bool isTrashingSecret,
   }) async {
     try {
       // Derive two keys from the password and salt using Argon2
       final derivatedKeys = Argon2.computeTwoKeysFromPassword(
-        password: password,
+        password: utf8.decode(password),
         salt: salt,
         length: 32,
       );
@@ -233,7 +233,7 @@ class KeyService {
       final encryptionKey = derivatedKeys.$2;
 
       final body = json.encode({
-        'identifier': backupId,
+        'identifier': HEX.encode(backupId),
         'authentication_key': HEX.encode(authenticationKey),
       });
 
