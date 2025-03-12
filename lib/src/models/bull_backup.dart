@@ -4,12 +4,11 @@ import 'package:hex/hex.dart';
 import 'package:recoverbull/src/models/exceptions.dart';
 
 // Represents data associated with an encrypted backup.
-
 class BullBackup {
   /// Unix timestamp (in seconds) when the backup was created
   final int createdAt;
 
-  /// Hex encoded Unique identifier for the backup
+  /// Hex encoded Unique id for the backup
   final List<int> id;
 
   /// Base64 encoded nonce + ciphertext + HMac
@@ -45,7 +44,7 @@ class BullBackup {
       final map = jsonDecode(json);
       return BullBackup.fromMap(map);
     } catch (e) {
-      throw BackupException('Invalid backup data format: ${e.toString()}');
+      throw RecoverBullException('Invalid backup data format: ${e.toString()}');
     }
   }
 

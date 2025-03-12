@@ -33,7 +33,7 @@ final _backupKey =
 
 class _ExampleState extends State<Example> {
   String log = "";
-  KeyService? _keyService;
+  KeyServer? _keyService;
   Tor? _tor;
   bool _torLoading = false;
   bool _stored = false;
@@ -139,8 +139,8 @@ class _ExampleState extends State<Example> {
       _tor = Tor.instance;
     }
 
-    _keyService = KeyService(
-      keyServer: keyServerUri,
+    _keyService = KeyServer(
+      address: keyServerUri,
       tor: _tor, // null if not onion link
     );
 
@@ -159,7 +159,7 @@ class _ExampleState extends State<Example> {
     if (_keyService == null) return;
 
     try {
-      final info = await _keyService!.serverInfo();
+      final info = await _keyService!.infos();
       setState(() => log += '\ninfo: ${info.canary}');
     } catch (e) {
       setState(() => log += '\nError: $e');
@@ -168,7 +168,7 @@ class _ExampleState extends State<Example> {
 
   void storeBackup() async {
     try {
-      final backup = BackupService.createBackup(
+      final backup = RecoverBull.createBackup(
         secret: utf8.encode(secret),
         backupKey: HEX.decode(_backupKey),
       );
@@ -234,19 +234,19 @@ class _ExampleState extends State<Example> {
 
     setState(() => log = '');
 
-    final backup = BackupService.createBackup(
+    final backup = RecoverBull.createBackup(
       secret: utf8.encode(secret),
       backupKey: HEX.decode(_backupKey),
     );
     setState(() => log += '\nbackup created: ${HEX.encode(backup.id)}');
 
-    final secretRestored = BackupService.restoreBackup(
+    final secretRestored = RecoverBull.restoreBackup(
       backup: backup,
       backupKey: HEX.decode(_backupKey),
     );
     setState(() => log += '\nsecret restored: ${utf8.decode(secretRestored)}');
 
-    final info = await _keyService!.serverInfo();
+    final info = await _keyService!.infos();
     setState(() => log += '\ninfo.cooldown: ${info.cooldown}');
     setState(() => log += '\ninfo.canary: ${info.canary}');
     setState(() => log += '\ninfo.secretMaxLength: ${info.secretMaxLength}');

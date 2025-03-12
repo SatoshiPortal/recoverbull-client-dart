@@ -9,25 +9,25 @@ import 'package:recoverbull/src/services/argon2.dart';
 import 'package:recoverbull/src/services/encryption.dart';
 import 'package:tor/socks_socket.dart';
 
-/// The [KeyService] class provides functionalities to store and recover
+/// The [KeyServer] class provides functionalities to store and recover
 /// backup keys securely by interacting with a remote key server API. It handles
 /// key derivation, encryption, and communication with the server.
-class KeyService {
-  final Uri keyServer;
+class KeyServer {
+  final Uri address;
 
   late Tor? _tor;
   late int _torPort;
   static const _headers = {'Content-Type': 'application/json'};
 
   // constructor
-  KeyService({
-    required this.keyServer,
+  KeyServer({
+    required this.address,
     Tor? tor,
     int? torPort,
   }) {
-    final tld = keyServer.host.split('.').last;
+    final tld = address.host.split('.').last;
     if ((tor == null && tld == 'onion') || (tor != null && tld != 'onion')) {
-      throw KeyServiceException(message: 'use .onion URI with TOR');
+      throw KeyServerException(message: 'use .onion URI with TOR');
     }
     _tor = tor;
     _torPort = torPort ?? 80;
@@ -42,7 +42,7 @@ class KeyService {
     final socks = await SOCKSSocket.create(
       proxyHost: InternetAddress.loopbackIPv4.address,
       proxyPort: Tor.instance.port,
-      sslEnabled: keyServer.scheme == 'https' ? true : false,
+      sslEnabled: address.scheme == 'https' ? true : false,
     );
     return socks;
   }
@@ -51,9 +51,9 @@ class KeyService {
   /// - cooldown
   /// - canary
   /// - signature
-  Future<Info> serverInfo() async {
+  Future<Info> infos() async {
     try {
-      final uri = keyServer.replace(path: '/info');
+      final uri = address.replace(path: '/info');
 
       http.Response response;
       if (_tor == null) {
@@ -70,7 +70,7 @@ class KeyService {
       }
 
       if (response.statusCode != 200) {
-        throw KeyServiceException.fromResponse(response);
+        throw KeyServerException.fromResponse(response);
       }
 
       final responseJson = json.decode(utf8.decode(response.bodyBytes));
@@ -79,25 +79,25 @@ class KeyService {
       // check warrant canary
       const canary = '🐦';
       if (info.canary != canary) {
-        throw KeyServiceException(
+        throw KeyServerException(
             message:
                 'Warrant Canary: $canary is missing. This may indicate a compromise or inability to confirm the canary\'s integrity.');
       }
 
       return info;
     } catch (e) {
-      if (e is http.Response) throw KeyServiceException.fromResponse(e);
-      throw KeyServiceException(message: e.toString());
+      if (e is http.Response) throw KeyServerException.fromResponse(e);
+      throw KeyServerException(message: e.toString());
     }
   }
 
   /// Stores an encryptedBackupKey backup key on the remote key-server.
   ///
   /// Parameters:
-  /// - `backupId`: Hex-encoded random bytes
-  /// - `password`: The password used for key derivation.
+  /// - `backupId`: The backup identifier bytes
+  /// - `password`: The password bytes (UTF8)
   /// - `backupKey`: The bytes of the backup key
-  /// - `salt`: The bytes of the salt used in key derivation.
+  /// - `salt`: The bytes of the salt used in key derivation
   Future<void> storeBackupKey({
     required List<int> backupId,
     required List<int> password,
@@ -106,7 +106,7 @@ class KeyService {
   }) async {
     try {
       if (salt.length != 16) {
-        throw KeyServiceException(
+        throw KeyServerException(
           message: '16 random secure bytes are expected for the salt',
         );
       }
@@ -118,7 +118,7 @@ class KeyService {
         length: 32,
       );
       if (derivatedKeys.$1.length != 32 || derivatedKeys.$2.length != 32) {
-        throw KeyServiceException(
+        throw KeyServerException(
             message: 'Each key should have the same length');
       }
       // authentication key will be consumed by the key server
@@ -144,7 +144,7 @@ class KeyService {
       http.Response response;
       if (_tor == null) {
         response = await http.post(
-          keyServer.replace(path: endpoint),
+          address.replace(path: endpoint),
           headers: _headers,
           body: body,
         );
@@ -153,7 +153,7 @@ class KeyService {
           socks: await _socks,
           request: [
             'POST $endpoint HTTP/1.1',
-            'Host: ${keyServer.host}',
+            'Host: ${address.host}',
             'Content-Type: application/json',
             'Content-Length: ${body.length}',
             '',
@@ -163,20 +163,20 @@ class KeyService {
       }
 
       if (response.statusCode != 201) {
-        throw KeyServiceException.fromResponse(response);
+        throw KeyServerException.fromResponse(response);
       }
     } catch (e) {
-      if (e is http.Response) throw KeyServiceException.fromResponse(e);
-      throw KeyServiceException(message: e.toString());
+      if (e is http.Response) throw KeyServerException.fromResponse(e);
+      throw KeyServerException(message: e.toString());
     }
   }
 
   /// Fetch an encryptedBackupKey backup key from the key server.
   ///
   /// Parameters:
-  /// - `backupId`: Hex-encoded random bytes
-  /// - `password`: The password used for key derivation.
-  /// - `salt`: The bytes of the salt used in key derivation.
+  /// - `backupId`: The backup identifier bytes
+  /// - `password`: The password bytes (UTF8)
+  /// - `salt`: The bytes of the salt used in key derivation
   Future<List<int>> fetchBackupKey({
     required List<int> backupId,
     required List<int> password,
@@ -193,9 +193,9 @@ class KeyService {
   /// Delete an encryptedBackupKey backup key from the key server.
   ///
   /// Parameters:
-  /// - `backupId`: Hex-encoded random bytes
-  /// - `password`: The password used for key derivation.
-  /// - `salt`: The bytes of the salt used in key derivation.
+  /// - `backupId`: The backup identifier bytes
+  /// - `password`: The password bytes (UTF8)
+  /// - `salt`: The bytes of the salt used in key derivation
   Future<List<int>> trashBackupKey({
     required List<int> backupId,
     required List<int> password,
@@ -223,7 +223,7 @@ class KeyService {
         length: 32,
       );
       if (derivatedKeys.$1.length != 32 || derivatedKeys.$2.length != 32) {
-        throw KeyServiceException(
+        throw KeyServerException(
           message: 'Each key should have the same length',
         );
       }
@@ -243,7 +243,7 @@ class KeyService {
       http.Response response;
       if (_tor == null) {
         response = await http.post(
-          keyServer.replace(path: endpoint),
+          address.replace(path: endpoint),
           headers: _headers,
           body: body,
         );
@@ -252,7 +252,7 @@ class KeyService {
           socks: await _socks,
           request: [
             'POST $endpoint HTTP/1.1',
-            'Host: ${keyServer.host}',
+            'Host: ${address.host}',
             'Content-Type: application/json',
             'Content-Length: ${body.length}',
             '',
@@ -263,7 +263,7 @@ class KeyService {
 
       // /fetch should returns 200 while /trash should returns 202
       if (response.statusCode != 200 && response.statusCode != 202) {
-        throw KeyServiceException.fromResponse(response);
+        throw KeyServerException.fromResponse(response);
       }
 
       final data = json.decode(utf8.decode(response.bodyBytes));
@@ -292,7 +292,7 @@ class KeyService {
     try {
       await socks.connect(); // Establish SOCKS connection
       // Connect to target server
-      await socks.connectTo(keyServer.host, _torPort);
+      await socks.connectTo(address.host, _torPort);
 
       socks.write(request); // Send the request
 

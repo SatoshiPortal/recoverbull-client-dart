@@ -15,39 +15,39 @@ class EncryptionException implements Exception {
 }
 
 /// Exception specific to backup operations
-class BackupException implements Exception {
+class RecoverBullException implements Exception {
   final String message;
   final dynamic cause;
 
-  BackupException(this.message, [this.cause]);
+  RecoverBullException(this.message, [this.cause]);
 
   @override
   String toString() =>
-      'BackupException: $message${cause != null ? ' ($cause)' : ''}';
+      'RecoverBullException: $message${cause != null ? ' ($cause)' : ''}';
 }
 
 /// Custom exception for key management operations
-class KeyServiceException implements Exception {
+class KeyServerException implements Exception {
   int? code;
   String? message;
   DateTime? requestedAt;
   int? cooldownInMinutes;
 
-  KeyServiceException({
+  KeyServerException({
     this.code,
     this.message,
     this.requestedAt,
     this.cooldownInMinutes,
   });
 
-  static KeyServiceException fromResponse(Response response) {
+  static KeyServerException fromResponse(Response response) {
     final body = json.decode(response.body);
     final requestedAt = body['requested_at'] != null
         ? DateTime.parse(body['requested_at'])
         : null;
     final cooldownInMinutes = body['cooldown'];
 
-    return KeyServiceException(
+    return KeyServerException(
       code: response.statusCode,
       message: body['error'],
       requestedAt: requestedAt,
@@ -57,5 +57,5 @@ class KeyServiceException implements Exception {
 
   @override
   String toString() =>
-      'KeyServiceException(code: $code, message: $message, requestedAt: $requestedAt, cooldown: $cooldownInMinutes)';
+      'KeyServerException(code: $code, message: $message, requestedAt: $requestedAt, cooldown: $cooldownInMinutes)';
 }

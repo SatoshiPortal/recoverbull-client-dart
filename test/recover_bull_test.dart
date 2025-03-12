@@ -11,7 +11,7 @@ void main() {
   final secret = utf8.encode(
       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about');
 
-  final backup = BackupService.createBackup(
+  final backup = RecoverBull.createBackup(
     secret: secret,
     backupKey: key,
   );
@@ -37,7 +37,7 @@ void main() {
     });
 
     test('restore', () {
-      final restoredSecret = BackupService.restoreBackup(
+      final restoredSecret = RecoverBull.restoreBackup(
         backup: backup,
         backupKey: key,
       );

@@ -12,15 +12,15 @@ void main() async {
       'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about');
   final password = utf8.encode("PasswØrd");
 
-  final backup = BackupService.createBackup(
+  final backup = RecoverBull.createBackup(
     secret: secret,
     backupKey: backupKey,
   );
 
   final env = DotEnv(includePlatformEnvironment: true)..load();
-  final envSecretServer = env['SECRET_SERVER'];
-  if (env['SECRET_SERVER'] == null) {
-    throw Exception('please set SECRET_SERVER in a .env');
+  final envSecretServer = env['KEY_SERVER'];
+  if (env['KEY_SERVER'] == null) {
+    throw Exception('please set KEY_SERVER in a .env');
   }
 
   final keyServerUri = Uri.parse(envSecretServer!);
@@ -32,11 +32,11 @@ void main() async {
   //   tor = Tor.instance;
   // }
 
-  final keyService = KeyService(keyServer: keyServerUri); // tor: tor,
+  final keyService = KeyServer(address: keyServerUri); // tor: tor,
 
-  group('KeyService', () {
+  group('KeyServer', () {
     test('info', () async {
-      final info = await keyService.serverInfo();
+      final info = await keyService.infos();
 
       expect(info.cooldown, isNotNull);
       expect(info.cooldown, isPositive);
@@ -109,7 +109,7 @@ void main() async {
         password: utf8.encode('a'),
         salt: [],
       );
-    } on KeyServiceException catch (e) {
+    } on KeyServerException catch (e) {
       expect(e.message,
           'identifier or authentication_key are not 256 bits HEX hashes');
       return;
@@ -124,7 +124,7 @@ void main() async {
         password: utf8.encode('invalid'),
         salt: [],
       );
-    } on KeyServiceException catch (e) {
+    } on KeyServerException catch (e) {
       expect(e.cooldownInMinutes, isNotNull);
       expect(e.requestedAt, isNotNull);
       expect(e.message, isNotEmpty);

@@ -1,16 +1,14 @@
-import 'dart:convert';
-import 'package:hex/hex.dart';
 import 'package:recoverbull/recoverbull.dart';
 import 'package:recoverbull/src/services/encryption.dart';
 
-/// BackupService helps you to create and restore bull backups
-class BackupService {
+/// RecoverBull helps you to create and restore bull backups
+class RecoverBull {
   /// Creates an encrypted backup of your [secret] content
   /// using a provided [backupKey] for the encryption
   ///
   /// Parameters:
   /// - `secret` - The bytes of your plaintext to encrypt
-  /// - `backupKey` - The encryption key
+  /// - `backupKey` - The bytes of the encryption key
   static BullBackup createBackup({
     required List<int> secret,
     required List<int> backupKey,
@@ -20,11 +18,11 @@ class BackupService {
 
     try {
       if (secret.isEmpty) {
-        throw BackupException('Backup data cannot be empty');
+        throw RecoverBullException('Backup data cannot be empty');
       }
 
       if (backupKey.length < 32) {
-        throw BackupException('32 bytes expected for the backup key');
+        throw RecoverBullException('32 bytes expected for the backup key');
       }
 
       final encryption = EncryptionService.encrypt(
@@ -44,8 +42,8 @@ class BackupService {
 
       return backup;
     } catch (e) {
-      if (e is BackupException) rethrow;
-      throw BackupException('Failed to create backup: ${e.toString()}');
+      if (e is RecoverBullException) rethrow;
+      throw RecoverBullException('Failed to create backup: ${e.toString()}');
     }
   }
 
@@ -64,24 +62,25 @@ class BackupService {
         final ciphertextBytes = backup.ciphertext;
         encryption = EncryptionService.splitBytes(ciphertextBytes);
       } catch (e) {
-        throw BackupException('Invalid encrypted data format: ${e.toString()}');
+        throw RecoverBullException(
+            'Invalid encrypted data format: ${e.toString()}');
       }
-
-      final plaintextBytes = EncryptionService.decrypt(
-        ciphertext: encryption.ciphertext,
-        nonce: encryption.nonce,
-        key: backupKey,
-        hmac: encryption.hmac,
-      );
 
       try {
+        final plaintextBytes = EncryptionService.decrypt(
+          ciphertext: encryption.ciphertext,
+          nonce: encryption.nonce,
+          key: backupKey,
+          hmac: encryption.hmac,
+        );
+
         return plaintextBytes;
       } catch (e) {
-        throw BackupException('Data is not valid UTF-8: ${e.toString()}');
+        throw RecoverBullException('Data is not valid UTF-8: ${e.toString()}');
       }
     } catch (e) {
-      if (e is BackupException) rethrow;
-      throw BackupException('Failed to restore backup: ${e.toString()}');
+      if (e is RecoverBullException) rethrow;
+      throw RecoverBullException('Failed to restore backup: ${e.toString()}');
     }
   }
 }
