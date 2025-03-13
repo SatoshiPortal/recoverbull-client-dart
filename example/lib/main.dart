@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:hex/hex.dart';
@@ -123,33 +124,53 @@ class _ExampleState extends State<Example> {
     );
   }
 
+  bool isOnionLink() {
+    final keyServerUri = Uri.parse(_keyServerUrl.text);
+
+    final tld = keyServerUri.host.split('.').last;
+
+    if (tld == 'onion') return true;
+    return false;
+  }
+
+  Future<SOCKSSocket> createSocks({
+    required int port,
+    String? host,
+    bool? ssl,
+  }) async {
+    return await SOCKSSocket.create(
+      proxyHost: host ?? InternetAddress.loopbackIPv4.address,
+      proxyPort: port,
+      sslEnabled: ssl ?? false,
+    );
+  }
+
   void startTor() async {
     if (!_formKey.currentState!.validate()) return;
 
     final keyServerUri = Uri.parse(_keyServerUrl.text);
 
-    final tld = keyServerUri.host.split('.').last;
-    if (tld == 'onion') {
+    if (isOnionLink()) {
       _torLoading = true;
       log += '\nStarting TOR…';
       setState(() {});
 
+      // In this example we are using the Tor daemon from Tor package
+      // but you could initialize your own as long as you create the proper SOCKS socket
       await Tor.init();
       await Tor.instance.start(); // start the proxy
+      await Tor.instance.isReady();
       _tor = Tor.instance;
     }
 
-    _keyService = KeyServer(
-      address: keyServerUri,
-      tor: _tor, // null if not onion link
-    );
+    _keyService = KeyServer(address: keyServerUri);
 
     _torLoading = false;
     setState(() => log += '\nKeyService initialized');
   }
 
   void stopTor() {
-    _keyService?.dispose();
+    _tor?.stop();
     log = '';
     _keyService = null;
     setState(() {});
@@ -158,8 +179,11 @@ class _ExampleState extends State<Example> {
   void getInfo() async {
     if (_keyService == null) return;
 
+    SOCKSSocket? socks;
+    if (isOnionLink()) socks = await createSocks(port: _tor!.port);
+
     try {
-      final info = await _keyService!.infos();
+      final info = await _keyService!.infos(socks: socks);
       setState(() => log += '\ninfo: ${info.canary}');
     } catch (e) {
       setState(() => log += '\nError: $e');
@@ -173,9 +197,13 @@ class _ExampleState extends State<Example> {
         backupKey: HEX.decode(_backupKey),
       );
 
-      setState(() => log += '\ncreate backup: ${backup.id} ');
+      setState(() => log += '\ncreate backup: ${HEX.encode(backup.id)} ');
+
+      SOCKSSocket? socks;
+      if (isOnionLink()) socks = await createSocks(port: _tor!.port);
 
       await _keyService?.storeBackupKey(
+        socks: socks,
         backupId: backup.id,
         password: utf8.encode(password),
         backupKey: HEX.decode(_backupKey),
@@ -201,7 +229,11 @@ class _ExampleState extends State<Example> {
       return;
     }
 
+    SOCKSSocket? socks;
+    if (isOnionLink()) socks = await createSocks(port: _tor!.port);
+
     final backupKey = await _keyService!.fetchBackupKey(
+      socks: socks,
       backupId: _backupId,
       password: utf8.encode(password),
       salt: _salt,
@@ -219,7 +251,11 @@ class _ExampleState extends State<Example> {
       return;
     }
 
+    SOCKSSocket? socks;
+    if (isOnionLink()) socks = await createSocks(port: _tor!.port);
+
     final backupKey = await _keyService!.trashBackupKey(
+      socks: socks,
       backupId: _backupId,
       password: utf8.encode(password),
       salt: _salt,
@@ -246,12 +282,18 @@ class _ExampleState extends State<Example> {
     );
     setState(() => log += '\nsecret restored: ${utf8.decode(secretRestored)}');
 
-    final info = await _keyService!.infos();
+    SOCKSSocket? socks;
+    if (isOnionLink()) socks = await createSocks(port: _tor!.port);
+
+    final info = await _keyService!.infos(socks: socks);
     setState(() => log += '\ninfo.cooldown: ${info.cooldown}');
     setState(() => log += '\ninfo.canary: ${info.canary}');
     setState(() => log += '\ninfo.secretMaxLength: ${info.secretMaxLength}');
 
+    if (isOnionLink()) socks = await createSocks(port: _tor!.port);
+
     await _keyService!.storeBackupKey(
+      socks: socks,
       backupId: backup.id,
       password: utf8.encode(password),
       backupKey: HEX.decode(_backupKey),
@@ -259,7 +301,10 @@ class _ExampleState extends State<Example> {
     );
     setState(() => log += '\nbackup key stored encrypted on the server');
 
+    if (isOnionLink()) socks = await createSocks(port: _tor!.port);
+
     final backupKeyBytes = await _keyService!.fetchBackupKey(
+      socks: socks,
       backupId: backup.id,
       password: utf8.encode(password),
       salt: backup.salt,

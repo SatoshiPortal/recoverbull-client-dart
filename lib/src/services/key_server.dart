@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:hex/hex.dart';
@@ -7,60 +6,51 @@ import 'package:recoverbull/recoverbull.dart';
 import 'package:recoverbull/src/models/info.dart';
 import 'package:recoverbull/src/services/argon2.dart';
 import 'package:recoverbull/src/services/encryption.dart';
-import 'package:tor/socks_socket.dart';
 
 /// The [KeyServer] class provides functionalities to store and recover
 /// backup keys securely by interacting with a remote key server API. It handles
 /// key derivation, encryption, and communication with the server.
 class KeyServer {
+  /// [address] to connect through the SOCKS socket.
+  ///
+  /// https://something.com or http://something.onion if using Tor.
+  ///
+  /// If you decide to use Tor you must provide a SOCKSSocket
   final Uri address;
 
-  late Tor? _tor;
-  late int _torPort;
+  /// [port] to connect through the SOCKS socket.
+  final int torPort;
+
   static const _headers = {'Content-Type': 'application/json'};
 
   // constructor
-  KeyServer({
-    required this.address,
-    Tor? tor,
-    int? torPort,
-  }) {
+  KeyServer({required this.address, this.torPort = 80});
+
+  void _validateSocksProxy(SOCKSSocket? socks) {
     final tld = address.host.split('.').last;
-    if ((tor == null && tld == 'onion') || (tor != null && tld != 'onion')) {
-      throw KeyServerException(message: 'use .onion URI with TOR');
+    if (tld == 'onion' && socks == null) {
+      throw KeyServerException(
+        message: 'A SOCKS proxy is required to access onion services.',
+      );
     }
-    _tor = tor;
-    _torPort = torPort ?? 80;
-  }
-
-  void dispose() async {
-    _tor?.stop();
-    _tor = null;
-  }
-
-  Future<SOCKSSocket> get _socks async {
-    final socks = await SOCKSSocket.create(
-      proxyHost: InternetAddress.loopbackIPv4.address,
-      proxyPort: Tor.instance.port,
-      sslEnabled: address.scheme == 'https' ? true : false,
-    );
-    return socks;
   }
 
   /// serverInfo can be useful to check if the server is running and get infos such as
   /// - cooldown
   /// - canary
   /// - signature
-  Future<Info> infos() async {
+  Future<Info> infos({SOCKSSocket? socks}) async {
+    _validateSocksProxy(socks);
+
     try {
       final uri = address.replace(path: '/info');
 
       http.Response response;
-      if (_tor == null) {
+      if (socks == null) {
         response = await http.get(uri, headers: _headers);
       } else {
         response = await _torRequest(
-          socks: await _socks,
+          socks: socks,
           request: [
             'GET ${uri.path} HTTP/1.1\r\n',
             'Host: ${uri.host}\r\n',
@@ -99,11 +89,14 @@ class KeyServer {
   /// - `backupKey`: The bytes of the backup key
   /// - `salt`: The bytes of the salt used in key derivation
   Future<void> storeBackupKey({
+    SOCKSSocket? socks,
     required List<int> backupId,
     required List<int> password,
     required List<int> backupKey,
     required List<int> salt,
   }) async {
+    _validateSocksProxy(socks);
+
     try {
       if (salt.length != 16) {
         throw KeyServerException(
@@ -142,7 +135,7 @@ class KeyServer {
 
       const endpoint = '/store';
       http.Response response;
-      if (_tor == null) {
+      if (socks == null) {
         response = await http.post(
           address.replace(path: endpoint),
           headers: _headers,
@@ -150,7 +143,7 @@ class KeyServer {
         );
       } else {
         response = await _torRequest(
-          socks: await _socks,
+          socks: socks,
           request: [
             'POST $endpoint HTTP/1.1',
             'Host: ${address.host}',
@@ -178,11 +171,13 @@ class KeyServer {
   /// - `password`: The password bytes (UTF8)
   /// - `salt`: The bytes of the salt used in key derivation
   Future<List<int>> fetchBackupKey({
+    SOCKSSocket? socks,
     required List<int> backupId,
     required List<int> password,
     required List<int> salt,
   }) async {
     return _fetchKey(
+      socks: socks,
       backupId: backupId,
       password: password,
       salt: salt,
@@ -197,11 +192,13 @@ class KeyServer {
   /// - `password`: The password bytes (UTF8)
   /// - `salt`: The bytes of the salt used in key derivation
   Future<List<int>> trashBackupKey({
+    SOCKSSocket? socks,
     required List<int> backupId,
     required List<int> password,
     required List<int> salt,
   }) async {
     return _fetchKey(
+      socks: socks,
       backupId: backupId,
       password: password,
       salt: salt,
@@ -210,11 +207,14 @@ class KeyServer {
   }
 
   Future<List<int>> _fetchKey({
+    SOCKSSocket? socks,
     required List<int> backupId,
     required List<int> password,
     required List<int> salt,
     required bool isTrashingSecret,
   }) async {
+    _validateSocksProxy(socks);
+
     try {
       // Derive two keys from the password and salt using Argon2
       final derivatedKeys = Argon2.computeTwoKeysFromPassword(
@@ -241,7 +241,7 @@ class KeyServer {
       if (isTrashingSecret) endpoint = '/trash';
 
       http.Response response;
-      if (_tor == null) {
+      if (socks == null) {
         response = await http.post(
           address.replace(path: endpoint),
           headers: _headers,
@@ -249,7 +249,7 @@ class KeyServer {
         );
       } else {
         response = await _torRequest(
-          socks: await _socks,
+          socks: socks,
           request: [
             'POST $endpoint HTTP/1.1',
             'Host: ${address.host}',
@@ -292,7 +292,7 @@ class KeyServer {
     try {
       await socks.connect(); // Establish SOCKS connection
       // Connect to target server
-      await socks.connectTo(address.host, _torPort);
+      await socks.connectTo(address.host, torPort);
 
       socks.write(request); // Send the request
 
