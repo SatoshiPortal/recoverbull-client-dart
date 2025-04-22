@@ -32,12 +32,14 @@ class KeyServerException implements Exception {
   String? message;
   DateTime? requestedAt;
   int? cooldownInMinutes;
+  int? attempts;
 
   KeyServerException({
     this.code,
     this.message,
     this.requestedAt,
     this.cooldownInMinutes,
+    this.attempts,
   });
 
   static KeyServerException fromResponse(Response response) {
@@ -45,17 +47,17 @@ class KeyServerException implements Exception {
     final requestedAt = body['requested_at'] != null
         ? DateTime.parse(body['requested_at'])
         : null;
-    final cooldownInMinutes = body['cooldown'];
 
     return KeyServerException(
       code: response.statusCode,
       message: body['error'],
       requestedAt: requestedAt,
-      cooldownInMinutes: cooldownInMinutes,
+      cooldownInMinutes: body['rate_limit_cooldown'],
+      attempts: body['attempts'],
     );
   }
 
   @override
   String toString() =>
-      'KeyServerException(code: $code, message: $message, requestedAt: $requestedAt, cooldown: $cooldownInMinutes)';
+      'KeyServerException(code: $code, message: $message, requestedAt: $requestedAt, cooldown: $cooldownInMinutes, attempts: $attempts)';
 }
