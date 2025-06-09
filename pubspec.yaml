@@ -14,8 +14,8 @@ dependencies:
   tor:
     git:
       url: https://github.com/Foundation-Devices/tor
-      ref: main
-  socks5_proxy: ^2.0.0
+      ref: 440a2d2
+  socks5_proxy: ^2.1.0
   http_parser: ^4.1.2
 
 dev_dependencies:
