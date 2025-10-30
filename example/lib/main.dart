@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:hex/hex.dart';
 import 'package:recoverbull/recoverbull.dart';
 import 'package:socks5_proxy/socks.dart';
+import 'package:tor/tor.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

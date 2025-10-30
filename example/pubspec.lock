@@ -320,7 +320,7 @@ packages:
     source: hosted
     version: "0.7.4"
   tor:
-    dependency: transitive
+    dependency: "direct main"
     description:
       path: "."
       ref: "440a2d2"
