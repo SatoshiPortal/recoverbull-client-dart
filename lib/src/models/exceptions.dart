@@ -1,7 +1,5 @@
 import 'dart:convert';
 
-import 'package:http/http.dart';
-
 /// Custom exception for encryption operations
 class EncryptionException implements Exception {
   final String message;
@@ -42,14 +40,14 @@ class KeyServerException implements Exception {
     this.attempts,
   });
 
-  static KeyServerException fromResponse(Response response) {
-    final body = json.decode(response.body);
+  static KeyServerException fromResponse(int statusCode, String responseBody) {
+    final body = json.decode(responseBody);
     final requestedAt = body['requested_at'] != null
         ? DateTime.parse(body['requested_at'])
         : null;
 
     return KeyServerException(
-      code: response.statusCode,
+      code: statusCode,
       message: body['error'],
       requestedAt: requestedAt,
       cooldownInMinutes: body['rate_limit_cooldown'],

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dotenv/dotenv.dart';
 import 'package:hex/hex.dart';
@@ -24,15 +25,10 @@ void main() async {
   }
 
   final keyServerUri = Uri.parse(envSecretServer!);
-  // final tld = keyServerUri.host.split('.').last;
-  // Tor? tor;
-  // if (tld == 'onion') {
-  //   await Tor.init();
-  //   await Tor.instance.start(); // start the proxy
-  //   tor = Tor.instance;
-  // }
 
-  final keyService = KeyServer(address: keyServerUri); // tor: tor,
+  final client = HttpClient();
+
+  final keyService = KeyServer(address: keyServerUri, client: client);
 
   group('KeyServer', () {
     test('info', () async {

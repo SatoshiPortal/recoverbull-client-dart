@@ -1,6 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
 
-import 'package:http/http.dart' as http;
 import 'package:hex/hex.dart';
 import 'package:recoverbull/recoverbull.dart';
 import 'package:recoverbull/src/models/info.dart';
@@ -18,52 +18,33 @@ class KeyServer {
   /// If you decide to use Tor you must provide a SOCKSSocket
   final Uri address;
 
-  /// [port] to connect through the SOCKS socket.
-  final int torPort;
-
-  static const _headers = {'Content-Type': 'application/json'};
+  final HttpClient client;
 
   // constructor
-  KeyServer({required this.address, this.torPort = 80});
-
-  void _validateSocksProxy(SOCKSSocket? socks) {
-    final tld = address.host.split('.').last;
-    if (tld == 'onion' && socks == null) {
-      throw KeyServerException(
-        message: 'A SOCKS proxy is required to access onion services.',
-      );
-    }
-  }
+  KeyServer({required this.address, required this.client});
 
   /// serverInfo can be useful to check if the server is running and get infos such as
   /// - cooldown
   /// - canary
   /// - signature
-  Future<Info> infos({SOCKSSocket? socks}) async {
-    _validateSocksProxy(socks);
-
+  Future<Info> infos() async {
     try {
-      final uri = address.replace(path: '/info');
+      final endpoint = '/info';
+      HttpClientResponse response = await _request(
+        url: address.replace(path: endpoint),
+        body: null,
+      );
 
-      http.Response response;
-      if (socks == null) {
-        response = await http.get(uri, headers: _headers);
-      } else {
-        response = await _torRequest(
-          socks: socks,
-          request: [
-            'GET ${uri.path} HTTP/1.1\r\n',
-            'Host: ${uri.host}\r\n',
-            '\r\n'
-          ].join(),
+      final responseBody = await response.transform(utf8.decoder).join();
+
+      if (response.statusCode != 200) {
+        throw KeyServerException.fromResponse(
+          response.statusCode,
+          responseBody,
         );
       }
 
-      if (response.statusCode != 200) {
-        throw KeyServerException.fromResponse(response);
-      }
-
-      final responseJson = json.decode(utf8.decode(response.bodyBytes));
+      final responseJson = json.decode(responseBody);
       final info = Info.fromMap(responseJson);
 
       // check warrant canary
@@ -76,7 +57,13 @@ class KeyServer {
 
       return info;
     } catch (e) {
-      if (e is http.Response) throw KeyServerException.fromResponse(e);
+      if (e is HttpClientResponse) {
+        final responseBody = await e.transform(utf8.decoder).join();
+        throw KeyServerException.fromResponse(
+          e.statusCode,
+          responseBody,
+        );
+      }
       throw KeyServerException(message: e.toString());
     }
   }
@@ -89,14 +76,11 @@ class KeyServer {
   /// - `backupKey`: The bytes of the backup key
   /// - `salt`: The bytes of the salt used in key derivation
   Future<void> storeBackupKey({
-    SOCKSSocket? socks,
     required List<int> backupId,
     required List<int> password,
     required List<int> backupKey,
     required List<int> salt,
   }) async {
-    _validateSocksProxy(socks);
-
     try {
       if (salt.length != 16) {
         throw KeyServerException(
@@ -134,32 +118,27 @@ class KeyServer {
       });
 
       const endpoint = '/store';
-      http.Response response;
-      if (socks == null) {
-        response = await http.post(
-          address.replace(path: endpoint),
-          headers: _headers,
-          body: body,
-        );
-      } else {
-        response = await _torRequest(
-          socks: socks,
-          request: [
-            'POST $endpoint HTTP/1.1',
-            'Host: ${address.host}',
-            'Content-Type: application/json',
-            'Content-Length: ${body.length}',
-            '',
-            body
-          ].join('\r\n'),
-        );
-      }
+      HttpClientResponse response = await _request(
+        url: address.replace(path: endpoint),
+        body: body,
+      );
+
+      final responseBody = await response.transform(utf8.decoder).join();
 
       if (response.statusCode != 201) {
-        throw KeyServerException.fromResponse(response);
+        throw KeyServerException.fromResponse(
+          response.statusCode,
+          responseBody,
+        );
       }
     } catch (e) {
-      if (e is http.Response) throw KeyServerException.fromResponse(e);
+      if (e is HttpClientResponse) {
+        final responseBody = await e.transform(utf8.decoder).join();
+        throw KeyServerException.fromResponse(
+          e.statusCode,
+          responseBody,
+        );
+      }
       throw KeyServerException(message: e.toString());
     }
   }
@@ -171,13 +150,11 @@ class KeyServer {
   /// - `password`: The password bytes (UTF8)
   /// - `salt`: The bytes of the salt used in key derivation
   Future<List<int>> fetchBackupKey({
-    SOCKSSocket? socks,
     required List<int> backupId,
     required List<int> password,
     required List<int> salt,
   }) async {
     return _fetchKey(
-      socks: socks,
       backupId: backupId,
       password: password,
       salt: salt,
@@ -192,13 +169,11 @@ class KeyServer {
   /// - `password`: The password bytes (UTF8)
   /// - `salt`: The bytes of the salt used in key derivation
   Future<List<int>> trashBackupKey({
-    SOCKSSocket? socks,
     required List<int> backupId,
     required List<int> password,
     required List<int> salt,
   }) async {
     return _fetchKey(
-      socks: socks,
       backupId: backupId,
       password: password,
       salt: salt,
@@ -207,14 +182,11 @@ class KeyServer {
   }
 
   Future<List<int>> _fetchKey({
-    SOCKSSocket? socks,
     required List<int> backupId,
     required List<int> password,
     required List<int> salt,
     required bool isTrashingSecret,
   }) async {
-    _validateSocksProxy(socks);
-
     try {
       // Derive two keys from the password and salt using Argon2
       final derivatedKeys = Argon2.computeTwoKeysFromPassword(
@@ -240,33 +212,23 @@ class KeyServer {
       var endpoint = '/fetch';
       if (isTrashingSecret) endpoint = '/trash';
 
-      http.Response response;
-      if (socks == null) {
-        response = await http.post(
-          address.replace(path: endpoint),
-          headers: _headers,
-          body: body,
-        );
-      } else {
-        response = await _torRequest(
-          socks: socks,
-          request: [
-            'POST $endpoint HTTP/1.1',
-            'Host: ${address.host}',
-            'Content-Type: application/json',
-            'Content-Length: ${body.length}',
-            '',
-            body
-          ].join('\r\n'),
-        );
-      }
+      HttpClientResponse response = await _request(
+        url: address.replace(path: endpoint),
+        body: body,
+      );
+
+      final responseBody = await response.transform(utf8.decoder).join();
 
       // /fetch should returns 200 while /trash should returns 202
       if (response.statusCode != 200 && response.statusCode != 202) {
-        throw KeyServerException.fromResponse(response);
+        throw KeyServerException.fromResponse(
+          response.statusCode,
+          responseBody,
+        );
       }
 
-      final data = json.decode(utf8.decode(response.bodyBytes));
+      final data = json.decode(responseBody);
+
       final encryptedBackupKey = base64.decode(data['encrypted_secret']);
       final encryption = EncryptionService.splitBytes(encryptedBackupKey);
       final nonce = encryption.nonce;
@@ -281,33 +243,37 @@ class KeyServer {
 
       return backupKey;
     } catch (e) {
+      if (e is HttpClientResponse) {
+        final responseBody = await e.transform(utf8.decoder).join();
+        throw KeyServerException.fromResponse(
+          e.statusCode,
+          responseBody,
+        );
+      }
       rethrow;
     }
   }
 
-  Future<http.Response> _torRequest({
-    required SOCKSSocket socks,
-    required String request,
+  Future<HttpClientResponse> _request({
+    required Uri url,
+    required String? body,
   }) async {
     try {
-      await socks.connect(); // Establish SOCKS connection
-      // Connect to target server
-      await socks.connectTo(address.host, torPort);
-
-      socks.write(request); // Send the request
-
-      final response = <int>[];
-
-      await for (var bytes in socks.inputStream) {
-        response.addAll(bytes);
-        break;
+      HttpClientRequest request;
+      if (body != null) {
+        request = await client.postUrl(url);
+      } else {
+        request = await client.getUrl(url);
       }
+      request.headers.contentType = ContentType.json;
+      request.headers.add('Host', address.host);
 
-      return parseHttpResponse(response); // deserialize bytes
+      if (body != null) request.write(body);
+
+      final response = await request.close();
+      return response;
     } catch (e) {
       rethrow;
-    } finally {
-      await socks.close();
     }
   }
 }
