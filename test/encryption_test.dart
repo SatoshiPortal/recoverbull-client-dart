@@ -52,5 +52,55 @@ void main() {
         throwsA(isA<EncryptionException>()),
       );
     });
+
+    // Regression: KeyServer._fetchKey used to drop the HMAC before calling
+    // decrypt, so a tampered server response was decrypted silently. These
+    // tests pin the contract decrypt must enforce when the HMAC is provided.
+    group('tampered server response (HMAC enforced)', () {
+      test('a flipped ciphertext byte is rejected before decryption', () {
+        final tamperedCiphertext = List<int>.from(encryption.ciphertext);
+        tamperedCiphertext[0] = tamperedCiphertext[0] ^ 0x01;
+
+        expect(
+          () => EncryptionService.decrypt(
+            key: key,
+            ciphertext: tamperedCiphertext,
+            nonce: encryption.nonce,
+            hmac: encryption.hmac,
+          ),
+          throwsA(isA<EncryptionException>()),
+        );
+      });
+
+      test('a flipped HMAC byte is rejected before decryption', () {
+        final tamperedHmac = List<int>.from(encryption.hmac);
+        tamperedHmac[0] = tamperedHmac[0] ^ 0x01;
+
+        expect(
+          () => EncryptionService.decrypt(
+            key: key,
+            ciphertext: encryption.ciphertext,
+            nonce: encryption.nonce,
+            hmac: tamperedHmac,
+          ),
+          throwsA(isA<EncryptionException>()),
+        );
+      });
+
+      test('a flipped nonce byte is rejected before decryption', () {
+        final tamperedNonce = List<int>.from(encryption.nonce);
+        tamperedNonce[0] = tamperedNonce[0] ^ 0x01;
+
+        expect(
+          () => EncryptionService.decrypt(
+            key: key,
+            ciphertext: encryption.ciphertext,
+            nonce: tamperedNonce,
+            hmac: encryption.hmac,
+          ),
+          throwsA(isA<EncryptionException>()),
+        );
+      });
+    });
   });
 }

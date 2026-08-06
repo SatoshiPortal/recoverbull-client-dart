@@ -234,11 +234,15 @@ class KeyServer {
       final nonce = encryption.nonce;
       final ciphertext = encryption.ciphertext;
 
-      // Decrypts the encrypted backup key using the encryption key derived from user password and salt
+      // Decrypts the encrypted backup key using the encryption key derived from user password and salt.
+      // The HMAC MUST be verified: a malicious or compromised key server (or a row planted
+      // through the public /store endpoint) could otherwise return a tampered ciphertext
+      // that decrypts silently into a forged backup key.
       final backupKey = EncryptionService.decrypt(
         key: encryptionKey,
         ciphertext: ciphertext,
         nonce: nonce,
+        hmac: encryption.hmac,
       );
 
       return backupKey;
