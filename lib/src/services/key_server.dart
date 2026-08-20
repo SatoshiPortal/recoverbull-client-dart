@@ -53,6 +53,7 @@ class KeyServer {
         throw KeyServerException.fromResponse(
           response.statusCode,
           responseBody,
+          retryAfterHeader: response.headers.value('retry-after'),
         );
       }
 
@@ -74,6 +75,7 @@ class KeyServer {
         throw KeyServerException.fromResponse(
           e.statusCode,
           responseBody,
+          retryAfterHeader: e.headers.value('retry-after'),
         );
       }
       if (e is KeyServerException) rethrow;
@@ -142,6 +144,7 @@ class KeyServer {
         throw KeyServerException.fromResponse(
           response.statusCode,
           responseBody,
+          retryAfterHeader: response.headers.value('retry-after'),
         );
       }
     } catch (e) {
@@ -150,6 +153,7 @@ class KeyServer {
         throw KeyServerException.fromResponse(
           e.statusCode,
           responseBody,
+          retryAfterHeader: e.headers.value('retry-after'),
         );
       }
       if (e is KeyServerException) rethrow;
@@ -273,6 +277,7 @@ class KeyServer {
         throw KeyServerException.fromResponse(
           response.statusCode,
           responseBody,
+          retryAfterHeader: response.headers.value('retry-after'),
         );
       }
 
@@ -367,6 +372,7 @@ class KeyServer {
         throw KeyServerException.fromResponse(
           response.statusCode,
           responseBody,
+          retryAfterHeader: response.headers.value('retry-after'),
         );
       }
 
@@ -406,6 +412,7 @@ class KeyServer {
         throw KeyServerException.fromResponse(
           e.statusCode,
           responseBody,
+          retryAfterHeader: e.headers.value('retry-after'),
         );
       }
       rethrow;
