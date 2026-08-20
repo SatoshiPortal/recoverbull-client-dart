@@ -1,6 +1,8 @@
 class Info {
   final int cooldown;
-  final int maxFailedAttempts;
+  /// Total number of attempts allowed in a rate-limit window, including both
+  /// hits and misses.
+  final int maxAttempts;
   final int secretMaxLength;
   final String canary;
 
@@ -15,7 +17,7 @@ class Info {
 
   Info({
     required this.cooldown,
-    required this.maxFailedAttempts,
+    required this.maxAttempts,
     required this.secretMaxLength,
     required this.canary,
     this.attemptsCollectionStartedAt,
@@ -27,11 +29,16 @@ class Info {
       canary: map['canary'] as String,
       secretMaxLength: map['secret_max_length'] as int,
       cooldown: map['rate_limit_cooldown'] as int,
-      maxFailedAttempts: map['rate_limit_max_failed_attempts'] as int,
+      maxAttempts: (map['rate_limit_max_attempts'] ??
+          map['rate_limit_max_failed_attempts']) as int,
       attemptsCollectionStartedAt: map['attempts_collection_started_at'] != null
           ? DateTime.parse(map['attempts_collection_started_at'] as String)
           : null,
       maxAttemptIdentifiers: map['max_attempt_identifiers'] as int?,
     );
   }
+
+  /// Compatibility alias for the pre-R10 name.
+  @Deprecated('Use maxAttempts instead.')
+  int get maxFailedAttempts => maxAttempts;
 }

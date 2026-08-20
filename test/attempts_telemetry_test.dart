@@ -106,22 +106,36 @@ void main() {
   });
 
   group('Info telemetry fields', () {
-    test('parses the new fields when present', () {
+    test('parses the total attempt limit when present', () {
       final info = Info.fromMap({
         'canary': '🐦',
         'secret_max_length': 128,
         'rate_limit_cooldown': 1440,
-        'rate_limit_max_failed_attempts': 3,
+        'rate_limit_max_attempts': 3,
         'attempts_collection_started_at': '2026-08-05T09:00:00Z',
         'max_attempt_identifiers': 100000,
       });
 
+      expect(info.maxAttempts, 3);
       expect(info.attemptsCollectionStartedAt,
           DateTime.parse('2026-08-05T09:00:00Z'));
       expect(info.maxAttemptIdentifiers, 100000);
     });
 
-    test('tolerates their absence against older servers', () {
+    test('prefers the total attempt limit over the legacy failed limit', () {
+      final info = Info.fromMap({
+        'canary': '🐦',
+        'secret_max_length': 128,
+        'rate_limit_cooldown': 1440,
+        'rate_limit_max_attempts': 5,
+        'rate_limit_max_failed_attempts': 3,
+      });
+
+      expect(info.maxAttempts, 5);
+      expect(info.maxFailedAttempts, 5);
+    });
+
+    test('falls back to the legacy failed limit for older servers', () {
       final info = Info.fromMap({
         'canary': '🐦',
         'secret_max_length': 128,
@@ -129,6 +143,8 @@ void main() {
         'rate_limit_max_failed_attempts': 3,
       });
 
+      expect(info.maxAttempts, 3);
+      expect(info.maxFailedAttempts, 3);
       expect(info.attemptsCollectionStartedAt, isNull);
       expect(info.maxAttemptIdentifiers, isNull);
     });
