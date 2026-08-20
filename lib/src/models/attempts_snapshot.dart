@@ -13,6 +13,7 @@ class AttemptEntry {
   /// SHA-256 over the **raw identifier bytes** (not the hex string).
   final String idHash;
   final int totalAttempts;
+  final int totalRequests;
   final int failedAttempts;
   final DateTime windowStartedAt;
   final DateTime lastAttemptAt;
@@ -20,6 +21,7 @@ class AttemptEntry {
   AttemptEntry({
     required this.idHash,
     required this.totalAttempts,
+    required this.totalRequests,
     required this.failedAttempts,
     required this.windowStartedAt,
     required this.lastAttemptAt,
@@ -29,6 +31,7 @@ class AttemptEntry {
     return AttemptEntry(
       idHash: map['id_hash'] as String,
       totalAttempts: map['total_attempts'] as int,
+      totalRequests: (map['total_requests'] ?? map['total_attempts']) as int,
       failedAttempts: map['failed_attempts'] as int,
       windowStartedAt: DateTime.parse(map['window_started_at'] as String),
       lastAttemptAt: DateTime.parse(map['last_attempt_at'] as String),
@@ -55,8 +58,15 @@ class AttemptsSnapshot {
   });
 
   factory AttemptsSnapshot.fromMap(Map<String, dynamic> map) {
+    final version = map['version'];
+    if (version is! int || version != 1) {
+      throw FormatException(
+        'Unsupported telemetry version: $version (expected version 1)',
+      );
+    }
+
     return AttemptsSnapshot(
-      version: map['version'] as int,
+      version: version,
       collectionStartedAt:
           DateTime.parse(map['collection_started_at'] as String),
       entries: (map['entries'] as List<dynamic>)

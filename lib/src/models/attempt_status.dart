@@ -2,16 +2,19 @@
 /// returned by the key server on a successful `/fetch` or `/trash`.
 ///
 /// Semantics the consumer must know:
-/// - [totalAttempts] counts **all** lookups, including database hits: a hit
-///   does not prove ownership, because a public `/store` caller can plant a
-///   matching row. A total higher than the user's own operations is the
-///   warning signal.
+/// - [totalAttempts] counts distinct authentication candidates. A matching
+///   lookup does not prove ownership, because a public `/store` caller can
+///   plant a matching row.
+/// - [totalRequests] counts all authentication requests, including replays
+///   of the same candidate.
 /// - A successful lookup never resets the counters; they expire after the
 ///   server cooldown.
 /// - Timestamps are exact (second precision) by design: this response is
 ///   only reachable by someone who already knows the backup identifier.
 class AttemptStatus {
+  final int version;
   final int totalAttempts;
+  final int totalRequests;
   final int failedAttempts;
   final int remainingAttempts;
   final DateTime windowStartedAt;
@@ -19,7 +22,9 @@ class AttemptStatus {
   final DateTime resetsAt;
 
   AttemptStatus({
+    required this.version,
     required this.totalAttempts,
+    required this.totalRequests,
     required this.failedAttempts,
     required this.remainingAttempts,
     required this.windowStartedAt,
@@ -28,8 +33,17 @@ class AttemptStatus {
   });
 
   factory AttemptStatus.fromMap(Map<String, dynamic> map) {
+    final version = map['version'];
+    if (version is! int || version != 1) {
+      throw FormatException(
+        'Unsupported telemetry version: $version (expected version 1)',
+      );
+    }
+
     return AttemptStatus(
+      version: version,
       totalAttempts: map['total_attempts'] as int,
+      totalRequests: (map['total_requests'] ?? map['total_attempts']) as int,
       failedAttempts: map['failed_attempts'] as int,
       remainingAttempts: map['remaining_attempts'] as int,
       windowStartedAt: DateTime.parse(map['window_started_at'] as String),

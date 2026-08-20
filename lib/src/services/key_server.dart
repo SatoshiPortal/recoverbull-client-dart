@@ -21,10 +21,10 @@ class KeyServer {
   final HttpClient client;
 
   /// Hard cap on the accepted `/attempts` body size, in bytes. The server's
-  /// worst case is ~15.7 MB of JSON for 100,000 entries; anything larger is
+  /// worst case is ~22.1 MB of JSON for 100,000 entries; anything larger is
   /// rejected before parsing. The read aborts mid-stream, so a gzip bomb
   /// cannot expand past this cap in memory.
-  static const defaultMaxSnapshotBytes = 20 * 1024 * 1024;
+  static const defaultMaxSnapshotBytes = 32 * 1024 * 1024;
 
   // constructor
   KeyServer({required this.address, required this.client});
@@ -300,7 +300,7 @@ class KeyServer {
           _parseMaxAge(response.headers.value('cache-control'));
 
       // Parse and filter in a worker isolate: the snapshot can hold 100,000
-      // entries (~16 MB of JSON) and must never reach the caller's isolate.
+      // entries (~22.1 MB of JSON) and must never reach the caller's isolate.
       final parsed = await Isolate.run(() {
         final snapshot = AttemptsSnapshot.parse(body);
         final hashes = {
