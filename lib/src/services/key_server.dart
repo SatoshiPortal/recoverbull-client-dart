@@ -27,7 +27,32 @@ class KeyServer {
   static const defaultMaxSnapshotBytes = 32 * 1024 * 1024;
 
   // constructor
-  KeyServer({required this.address, required this.client});
+  KeyServer({required this.address, required this.client}) {
+    _validateAddress(address);
+  }
+
+  static void _validateAddress(Uri value) {
+    final scheme = value.scheme.toLowerCase();
+    final host = value.host.toLowerCase();
+    final localHost = host == 'localhost' ||
+        host == '127.0.0.1' ||
+        host == '::1';
+    final onionHost = host.endsWith('.onion');
+
+    if ((scheme != 'https' && scheme != 'http') ||
+        host.isEmpty ||
+        value.userInfo.isNotEmpty ||
+        value.hasQuery ||
+        value.hasFragment ||
+        (scheme == 'http' && !localHost && !onionHost)) {
+      throw ArgumentError.value(
+        value,
+        'address',
+        'must be HTTPS, or HTTP to localhost, loopback, or a .onion host '
+            'without credentials, query, or fragment',
+      );
+    }
+  }
 
   /// serverInfo can be useful to check if the server is running and get infos such as
   /// - cooldown
