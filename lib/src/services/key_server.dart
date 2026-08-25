@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:hex/hex.dart';
 import 'package:recoverbull/recoverbull.dart';
-import 'package:recoverbull/src/models/info.dart';
 import 'package:recoverbull/src/services/argon2.dart';
 import 'package:recoverbull/src/services/encryption.dart';
 
@@ -20,14 +20,51 @@ class KeyServer {
 
   final HttpClient client;
 
+  /// Hard cap on the accepted `/attempts` body size, in bytes. The server's
+  /// worst case is ~22.1 MB of JSON for 100,000 entries; anything larger is
+  /// rejected before parsing. The read aborts mid-stream, so a gzip bomb
+  /// cannot expand past this cap in memory.
+  static const defaultMaxSnapshotBytes = 32 * 1024 * 1024;
+
   // constructor
-  KeyServer({required this.address, required this.client});
+  KeyServer({required this.address, required this.client}) {
+    _validateAddress(address);
+  }
+
+  static void _validateAddress(Uri value) {
+    final scheme = value.scheme.toLowerCase();
+    final host = value.host.toLowerCase();
+    final localHost = host == 'localhost' ||
+        host == '127.0.0.1' ||
+        host == '::1';
+    final onionHost = host.endsWith('.onion');
+
+    if ((scheme != 'https' && scheme != 'http') ||
+        host.isEmpty ||
+        value.userInfo.isNotEmpty ||
+        value.hasQuery ||
+        value.hasFragment ||
+        (scheme == 'http' && !localHost && !onionHost)) {
+      throw ArgumentError.value(
+        value,
+        'address',
+        'must be HTTPS, or HTTP to localhost, loopback, or a .onion host '
+            'without credentials, query, or fragment',
+      );
+    }
+  }
 
   /// serverInfo can be useful to check if the server is running and get infos such as
   /// - cooldown
   /// - canary
   /// - signature
-  Future<Info> infos() async {
+  ///
+  /// [expectedCanary] is the warrant canary the consumer expects from this
+  /// server. It defaults to the historical `'🐦'` for backward
+  /// compatibility; consumers serving another key server MUST pass their own
+  /// expected value. An **empty** canary means the operator deliberately
+  /// removed it — the compromise signal — and always raises the alarm.
+  Future<Info> infos({String? expectedCanary}) async {
     try {
       final endpoint = '/info';
       HttpClientResponse response = await _request(
@@ -41,6 +78,7 @@ class KeyServer {
         throw KeyServerException.fromResponse(
           response.statusCode,
           responseBody,
+          retryAfterHeader: response.headers.value('retry-after'),
         );
       }
 
@@ -48,7 +86,7 @@ class KeyServer {
       final info = Info.fromMap(responseJson);
 
       // check warrant canary
-      const canary = '🐦';
+      final canary = expectedCanary ?? '🐦';
       if (info.canary != canary) {
         throw KeyServerException(
             message:
@@ -62,8 +100,10 @@ class KeyServer {
         throw KeyServerException.fromResponse(
           e.statusCode,
           responseBody,
+          retryAfterHeader: e.headers.value('retry-after'),
         );
       }
+      if (e is KeyServerException) rethrow;
       throw KeyServerException(message: e.toString());
     }
   }
@@ -129,6 +169,7 @@ class KeyServer {
         throw KeyServerException.fromResponse(
           response.statusCode,
           responseBody,
+          retryAfterHeader: response.headers.value('retry-after'),
         );
       }
     } catch (e) {
@@ -137,8 +178,10 @@ class KeyServer {
         throw KeyServerException.fromResponse(
           e.statusCode,
           responseBody,
+          retryAfterHeader: e.headers.value('retry-after'),
         );
       }
+      if (e is KeyServerException) rethrow;
       throw KeyServerException(message: e.toString());
     }
   }
@@ -150,6 +193,25 @@ class KeyServer {
   /// - `password`: The password bytes (UTF8)
   /// - `salt`: The bytes of the salt used in key derivation
   Future<List<int>> fetchBackupKey({
+    required List<int> backupId,
+    required List<int> password,
+    required List<int> salt,
+  }) async {
+    final result = await fetchBackupKeyWithStatus(
+      backupId: backupId,
+      password: password,
+      salt: salt,
+    );
+    return result.backupKey;
+  }
+
+  /// Fetch an encryptedBackupKey backup key from the key server, with the
+  /// exact attempt counters of the identifier's current rate-limit window.
+  ///
+  /// Prefer this method over [fetchBackupKey] when the consumer tracks
+  /// brute-force telemetry: the returned [AttemptStatus] is the freshest
+  /// signal and stays available even when `/attempts` is overloaded.
+  Future<FetchBackupKeyResult> fetchBackupKeyWithStatus({
     required List<int> backupId,
     required List<int> password,
     required List<int> salt,
@@ -173,6 +235,21 @@ class KeyServer {
     required List<int> password,
     required List<int> salt,
   }) async {
+    final result = await trashBackupKeyWithStatus(
+      backupId: backupId,
+      password: password,
+      salt: salt,
+    );
+    return result.backupKey;
+  }
+
+  /// Delete an encryptedBackupKey backup key from the key server, with the
+  /// exact attempt counters of the identifier's current rate-limit window.
+  Future<FetchBackupKeyResult> trashBackupKeyWithStatus({
+    required List<int> backupId,
+    required List<int> password,
+    required List<int> salt,
+  }) async {
     return _fetchKey(
       backupId: backupId,
       password: password,
@@ -181,7 +258,103 @@ class KeyServer {
     );
   }
 
-  Future<List<int>> _fetchKey({
+  /// Conditional `GET /attempts`: the public brute-force telemetry snapshot.
+  ///
+  /// - [etag]: the ETag persisted from a previous [AttemptsModified]. Sent
+  ///   back as `If-None-Match`; a `304` yields [AttemptsNotModified] without
+  ///   parsing a body.
+  /// - [backupIds]: locally known backup identifiers. Only the entries
+  ///   matching them are returned; the full snapshot (up to 100,000 entries)
+  ///   is parsed in a worker isolate and never retained by the caller.
+  /// - [backupIdHashes]: pre-computed identifier hashes (`attemptsIdHash`),
+  ///   for consumers that store hashes instead of raw identifiers. Matched
+  ///   entries are the union of both parameters.
+  /// - [maxSnapshotBytes]: hard cap on the accepted body size. The read
+  ///   aborts mid-stream past the cap, so a gzip bomb cannot expand in
+  ///   memory.
+  ///
+  /// Advisory telemetry: the server cannot distinguish an attacker from the
+  /// user or another of the user's devices, and a compromised server can
+  /// fabricate or suppress counters. Consumers must warn, never act
+  /// automatically.
+  Future<AttemptsResult> attempts({
+    String? etag,
+    List<List<int>> backupIds = const [],
+    List<String> backupIdHashes = const [],
+    int maxSnapshotBytes = defaultMaxSnapshotBytes,
+  }) async {
+    try {
+      HttpClientResponse response = await _request(
+        url: address.replace(path: '/attempts'),
+        body: null,
+        headers: {
+          if (etag != null) 'If-None-Match': etag,
+        },
+      );
+
+      if (response.statusCode == 304) {
+        await response.drain();
+        return const AttemptsNotModified();
+      }
+
+      if (response.statusCode != 200) {
+        final responseBody = await response.transform(utf8.decoder).join();
+        throw KeyServerException.fromResponse(
+          response.statusCode,
+          responseBody,
+          retryAfterHeader: response.headers.value('retry-after'),
+        );
+      }
+
+      // Size-capped read: aborts mid-stream past the cap. HttpClient
+      // auto-uncompresses gzip, so this bounds the decompressed size.
+      final bytes = <int>[];
+      await for (final chunk in response) {
+        bytes.addAll(chunk);
+        if (bytes.length > maxSnapshotBytes) {
+          throw KeyServerException(
+            message:
+                'attempts snapshot exceeds the $maxSnapshotBytes bytes limit',
+          );
+        }
+      }
+      final body = utf8.decode(bytes);
+
+      final responseEtag = response.headers.value('etag');
+      final maxAgeSeconds =
+          _parseMaxAge(response.headers.value('cache-control'));
+
+      // Parse and filter in a worker isolate: the snapshot can hold 100,000
+      // entries (~22.1 MB of JSON) and must never reach the caller's isolate.
+      final parsed = await Isolate.run(() {
+        final snapshot = AttemptsSnapshot.parse(body);
+        final hashes = {
+          ...backupIds.map(attemptsIdHash),
+          ...backupIdHashes,
+        };
+        return (
+          version: snapshot.version,
+          collectionStartedAt: snapshot.collectionStartedAt,
+          totalEntries: snapshot.entries.length,
+          matchingEntries: snapshot.entriesMatchingHashes(hashes),
+        );
+      });
+
+      return AttemptsModified(
+        etag: responseEtag,
+        maxAgeSeconds: maxAgeSeconds,
+        version: parsed.version,
+        collectionStartedAt: parsed.collectionStartedAt,
+        totalEntries: parsed.totalEntries,
+        matchingEntries: parsed.matchingEntries,
+      );
+    } catch (e) {
+      if (e is KeyServerException) rethrow;
+      throw KeyServerException(message: e.toString());
+    }
+  }
+
+  Future<FetchBackupKeyResult> _fetchKey({
     required List<int> backupId,
     required List<int> password,
     required List<int> salt,
@@ -224,6 +397,7 @@ class KeyServer {
         throw KeyServerException.fromResponse(
           response.statusCode,
           responseBody,
+          retryAfterHeader: response.headers.value('retry-after'),
         );
       }
 
@@ -234,20 +408,36 @@ class KeyServer {
       final nonce = encryption.nonce;
       final ciphertext = encryption.ciphertext;
 
-      // Decrypts the encrypted backup key using the encryption key derived from user password and salt
+      // Decrypts the encrypted backup key using the encryption key derived from user password and salt.
+      // The HMAC MUST be verified: a malicious or compromised key server (or a row planted
+      // through the public /store endpoint) could otherwise return a tampered ciphertext
+      // that decrypts silently into a forged backup key.
       final backupKey = EncryptionService.decrypt(
         key: encryptionKey,
         ciphertext: ciphertext,
         nonce: nonce,
+        hmac: encryption.hmac,
       );
 
-      return backupKey;
+      // attempt_status is additive on the server side; older servers do not
+      // send it. Null means "no telemetry": consumers must skip baseline
+      // reconciliation rather than treat a fabricated value as authoritative.
+      final attemptStatus = data['attempt_status'] != null
+          ? AttemptStatus.fromMap(
+              data['attempt_status'] as Map<String, dynamic>)
+          : null;
+
+      return FetchBackupKeyResult(
+        backupKey: backupKey,
+        attemptStatus: attemptStatus,
+      );
     } catch (e) {
       if (e is HttpClientResponse) {
         final responseBody = await e.transform(utf8.decoder).join();
         throw KeyServerException.fromResponse(
           e.statusCode,
           responseBody,
+          retryAfterHeader: e.headers.value('retry-after'),
         );
       }
       rethrow;
@@ -257,6 +447,7 @@ class KeyServer {
   Future<HttpClientResponse> _request({
     required Uri url,
     required String? body,
+    Map<String, String>? headers,
   }) async {
     try {
       HttpClientRequest request;
@@ -267,6 +458,7 @@ class KeyServer {
       }
       request.headers.contentType = ContentType.json;
       request.headers.add('Host', address.host);
+      headers?.forEach((name, value) => request.headers.add(name, value));
 
       if (body != null) request.write(body);
 
@@ -275,5 +467,11 @@ class KeyServer {
     } catch (e) {
       rethrow;
     }
+  }
+
+  static int? _parseMaxAge(String? cacheControl) {
+    if (cacheControl == null) return null;
+    final match = RegExp(r'max-age=(\d+)').firstMatch(cacheControl);
+    return match != null ? int.tryParse(match.group(1)!) : null;
   }
 }

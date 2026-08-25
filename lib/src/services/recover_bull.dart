@@ -21,6 +21,12 @@ class RecoverBull {
         throw RecoverBullException('Backup data cannot be empty');
       }
 
+      if (secret.length > BullBackup.maxPlaintextBytes) {
+        throw RecoverBullException(
+          'Backup data exceeds ${BullBackup.maxPlaintextBytes} bytes',
+        );
+      }
+
       if (backupKey.length < 32) {
         throw RecoverBullException('32 bytes expected for the backup key');
       }
